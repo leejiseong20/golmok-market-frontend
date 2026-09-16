@@ -1,0 +1,73 @@
+.panel {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.head { display: flex; align-items: baseline; gap: 8px; }
+.h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+.count { font-size: 13px; color: var(--ink-4); }
+
+.list { display: flex; flex-direction: column; gap: 8px; }
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #faf7f4;
+}
+
+.name { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.verify { font-size: 13px; color: var(--ink-4); }
+.buttons { margin-left: auto; display: flex; gap: 6px; }
+
+.buttons button {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.buttons button:disabled { opacity: 0.5; cursor: default; }
+
+.primary {
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary:disabled { opacity: 0.5; cursor: default; }
+
+.empty, .note { font-size: 13px; color: var(--ink-4); }
+
+.error {
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fdecea;
+  color: #8a2b20;
+}

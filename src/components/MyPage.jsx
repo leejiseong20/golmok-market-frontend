@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ProductCard from "./ProductCard.jsx";
 import PurchaseCard from "./PurchaseCard.jsx";
+import MyRegions from "./MyRegions.jsx";
 import { fetchMe, fetchMyFavorites } from "../api/userApi.js";
 import { confirmPurchase, fetchMyPurchases } from "../api/tradeApi.js";
 import styles from "./MyPage.module.css";
@@ -17,7 +18,7 @@ const emptyList = { items: [], cursor: null, hasNext: false, loading: true, load
  * 탭을 바꿀 때마다 서버에서 다시 받는다. 다른 기기에서 찜하거나 거래 상태가 바뀐 것까지 반영된다.
  * 판매내역 탭은 GET /api/products/me 가 생기면 TABS 에 한 줄 추가하면 된다.
  */
-export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin }) {
+export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin, onRegionsChange }) {
   const [tab, setTab] = useState("favorites");
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
@@ -118,6 +119,11 @@ export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin 
           : <p className={styles.temp}>매너온도 <strong>{profile ? `${profile.mannerTemp}℃` : "…"}</strong></p>}
       </div>
     </section>
+
+    {profile && <MyRegions regions={profile.regions} onChange={(regions) => {
+      setProfile((old) => ({ ...old, regions }));
+      onRegionsChange(regions);
+    }} />}
 
     <div className={styles.tabs} role="tablist" aria-label="마이페이지 메뉴">
       {TABS.map(({ id, label }) => <button key={id} role="tab" aria-selected={tab === id}

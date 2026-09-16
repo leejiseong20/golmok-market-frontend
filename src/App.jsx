@@ -44,6 +44,7 @@ export default function App() {
   const morePending = useRef(false);
   const detailController = useRef(null);
   const logoutPending = useRef(false);
+  const lastUserId = useRef(null);
 
   useEffect(() => {
     const abort = new AbortController();
@@ -71,6 +72,15 @@ export default function App() {
   useEffect(() => {
     detailController.current?.abort(); setDetail(null);
     return () => detailController.current?.abort();
+  }, [user?.id]);
+
+  // 로그인하는 순간에만 대표 동네를 홈에 적용한다. 매 렌더마다 적용하면
+  // 로그인한 사용자가 홈에서 다른 동네를 골라볼 수 없다.
+  useEffect(() => {
+    if (user && lastUserId.current !== user.id && user.primaryRegion) {
+      selectRegion({ id: user.primaryRegion.id, dong: user.primaryRegion.name });
+    }
+    lastUserId.current = user?.id ?? null;
   }, [user?.id]);
 
   async function more() {
@@ -127,6 +137,15 @@ export default function App() {
     }
   }
 
+  /**
+   * 동네 인증 결과를 홈 목록에 반영한다.
+   * 대표 동네를 인증해 두고도 홈에서 다시 고르게 하면 인증한 의미가 없다.
+   */
+  function applyPrimaryRegion(regions) {
+    const primary = regions.find((region) => region.isPrimary);
+    if (primary) selectRegion({ id: primary.id, dong: primary.name });
+  }
+
   function selectRegion(value) {
     setRegion(value); setModal(null);
     try { localStorage.setItem("golmok.region", JSON.stringify(value)); } catch { /* 메모리에서 선택 유지 */ }
@@ -155,7 +174,7 @@ export default function App() {
     </Header>
     {view === "home" && <div className={styles.mobileOnly}>{categoryBar}</div>}
     {view === "my"
-      ? <MyPage user={user} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite}
+      ? <MyPage user={user} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite} onRegionsChange={applyPrimaryRegion}
           onLogin={() => { setAccountError(""); setModal("auth"); }} />
       : <main className={styles.shell}>
       <section aria-label="상품 목록">
