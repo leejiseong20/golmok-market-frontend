@@ -82,7 +82,7 @@ src/
 
 ## 알려진 과제
 
-- **`vercel.json`의 백엔드 주소가 자리표시자(`YOUR_SUBDOMAIN.duckdns.org`)다.** DuckDNS 도메인을 만든 뒤 실제 주소로 바꿔 커밋해야 Vercel 배포가 API를 부를 수 있다. Vercel의 rewrites 는 환경변수를 쓸 수 없어 파일에 직접 적는다. 절차는 백엔드 `deploy/README.md` 7단계.
+- **`vercel.json`의 백엔드 주소가 자리표시자(`YOUR_SUBDOMAIN.duckdns.org`)다.** DuckDNS 도메인을 만든 뒤 실제 주소로 바꿔 커밋해야 Vercel 배포가 API를 부를 수 있다. Vercel의 rewrites 는 환경변수를 쓸 수 없어 파일에 직접 적는다. 절차는 백엔드 `deploy/README.md` 8단계.
 - (해결) 상품 등록·수정·삭제·상태 변경·끌어올리기와 판매내역 화면이 없던 문제: 실제 API와 연결했다.
 - (해결) 모바일 하단 메뉴가 버튼 4개를 3열로 배치해 등록 버튼을 가리던 문제: 4열로 수정하고 모바일 실제 클릭을 검증했다.
 - (해결) 기존 모킹 E2E의 `**/api/**` 패턴이 `/src/api/*.js` 소스 요청까지 가로채 빈 화면을 만들던 문제: URL pathname이 `/api/`로 시작하는 요청만 대상으로 한정했다. 모킹 시나리오 추가 없이 기존 회귀 검증을 복구했다.
