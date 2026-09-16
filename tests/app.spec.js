@@ -10,7 +10,8 @@ const products = [product(1, "원목 식탁"), product(2, "작은 스피커", 2)
 async function mockApi(page, { failure = false, delayOld = false } = {}) {
   const requests = [];
   let shouldFail = failure;
-  await page.route("**/api/**", async (route) => {
+  // /src/api/*.js 모듈까지 가로채면 JSON이 JS 대신 전달되어 빈 화면이 된다.
+  await page.route((url) => url.pathname.startsWith("/api/"), async (route) => {
     const request = route.request(), url = new URL(request.url());
     requests.push(url);
     const reply = (json, status = 200) => route.fulfill({ status, json });
@@ -110,7 +111,8 @@ test("가입 오류·가입 성공·로그인·새로고침 세션 복원·로�
   await dialog.getByLabel("닉네임", { exact: true }).fill("골목이");
   await dialog.getByRole("button", { name: "가입하기" }).click();
   await expect(dialog.getByRole("alert")).toContainText("이미 사용 중인 이메일");
-  await dialog.getByLabel("이메일", { exact: true }).fill("new@example.com");
+  // 오류 문구가 label 안에 추가돼도 같은 입력 요소를 찾는다.
+  await dialog.locator('input[name="email"]').fill("new@example.com");
   await dialog.getByRole("button", { name: "가입하기" }).click();
   await expect(dialog.getByRole("status")).toContainText("가입이 완료됐습니다");
   await dialog.getByLabel("비밀번호", { exact: true }).fill("Password123!");

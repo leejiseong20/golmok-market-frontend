@@ -34,13 +34,14 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
   }
 
   async function send(path, { method = "GET", body, signal, token } = {}) {
+    const multipart = typeof FormData !== "undefined" && body instanceof FormData;
     let response;
     try {
       response = await fetchImpl(`${baseUrl.replace(/\/$/, "")}${path}`, {
         method, signal,
-        headers: { ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        headers: { ...(body === undefined || multipart ? {} : { "Content-Type": "application/json" }),
           ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        ...(body === undefined ? {} : { body: multipart ? body : JSON.stringify(body) }),
       });
     } catch (error) {
       if (error.name === "AbortError") throw error;

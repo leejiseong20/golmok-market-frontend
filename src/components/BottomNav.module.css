@@ -27,7 +27,7 @@
   backdrop-filter: blur(8px);
 }
 
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
 
 .tab {
   display: flex;

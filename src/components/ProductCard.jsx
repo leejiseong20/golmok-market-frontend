@@ -32,11 +32,11 @@ export default function ProductCard({ product, onOpen, onToggleFavorite }) {
         <div className={styles.counts}><span>관심 {product.favoriteCount}</span><span>채팅 {product.chatCount}</span></div>
       </div>
     </button>
-    <button type="button" onClick={toggle} disabled={pending}
+    {onToggleFavorite && <button type="button" onClick={toggle} disabled={pending}
       className={styles.like + (product.isLiked ? " " + styles.liked : "")}
       aria-pressed={product.isLiked}
       aria-label={product.title + (product.isLiked ? " 관심 해제" : " 관심 등록")}>
       {product.isLiked ? "♥" : "♡"}
-    </button>
+    </button>}
   </article>;
 }

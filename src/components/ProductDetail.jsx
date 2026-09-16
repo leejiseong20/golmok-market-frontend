@@ -1,14 +1,37 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { bumpProduct, changeProductStatus, deleteProduct } from "../api/productApi.js";
 import { formatDate, formatPrice, statusLabel } from "../data/format.js";
 import Modal from "./Modal.jsx";
 import styles from "./Modal.module.css";
 
-export default function ProductDetail({ detail, onClose, onRetry }) {
+export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChanged, onDeleted }) {
   const [index, setIndex] = useState(0);
   const [failedImage, setFailedImage] = useState(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const busy = useRef(false);
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const product = detail.data;
   const image = product?.images[index];
-  return <Modal title="상품 상세" onClose={onClose}>
+  async function act(kind, status) {
+    if (busy.current) return;
+    if (kind === "delete" && !window.confirm("상품을 삭제할까요? 삭제한 상품은 목록에서 사라집니다.")) return;
+    busy.current = true; setPending(true); setError(""); setNotice("");
+    try {
+      if (kind === "delete") { await deleteProduct(product.id); if (alive.current) onDeleted(product.id); }
+      else if (kind === "status") {
+        const updated = await changeProductStatus(product.id, status);
+        if (alive.current) { onChanged(updated); setNotice("상품 상태를 변경했어요."); }
+      } else {
+        await bumpProduct(product.id);
+        if (alive.current) { onChanged(product); setNotice("상품을 끌어올렸어요."); }
+      }
+    } catch (e) { if (alive.current) setError(e.message); }
+    finally { busy.current = false; if (alive.current) setPending(false); }
+  }
+  return <Modal title="상품 상세" busy={pending} onClose={() => { if (!busy.current) onClose(); }}>
     {detail.loading && <p role="status">상품을 불러오고 있어요…</p>}
     {detail.error && <><p className={styles.error} role="alert">{detail.error}</p>
       <div className={styles.actions}><button className={styles.secondary} onClick={onRetry}>다시 시도</button></div></>}
@@ -33,6 +56,22 @@ export default function ProductDetail({ detail, onClose, onRetry }) {
         {product.isLiked ? " · 관심 등록한 상품" : ""}</p>
       <p className={styles.note}>등록 {formatDate(product.createdAt)}</p>
       <div className={styles.seller}><strong>{product.seller.nickname}</strong><span>매너온도 {Number(product.seller.mannerTemp).toFixed(1)}°C</span></div>
+      {product.isMine && <section aria-label="내 상품 관리">
+        {error && <p className={styles.error} role="alert">{error}</p>}
+        {notice && <p className={styles.success} role="status">{notice}</p>}
+        <div className={styles.actions}>
+          {product.status !== "SOLD" && <>
+            <button className={styles.secondary} disabled={pending} onClick={() => onEdit(product)}>수정하기</button>
+            <button className={styles.secondary} disabled={pending} onClick={() => act("bump")}>끌어올리기</button>
+            <button className={styles.secondary} disabled={pending} onClick={() => act("status", product.status === "ON_SALE" ? "RESERVED" : "ON_SALE")}>{product.status === "ON_SALE" ? "예약중으로 변경" : "판매중으로 변경"}</button>
+            <button className={styles.secondary} disabled={pending} onClick={() => {
+              if (window.confirm("판매완료로 변경할까요? 판매중으로 되돌릴 수 없습니다.")) act("status", "SOLD");
+            }}>판매완료로 변경</button>
+          </>}
+          <button className={styles.secondary} disabled={pending} onClick={() => act("delete")}>삭제하기</button>
+        </div>
+        {product.status !== "SOLD" && <p className={styles.note}>끌어올리기는 등록 또는 마지막 끌어올리기 후 24시간마다 가능해요.</p>}
+      </section>}
     </>}
   </Modal>;
 }

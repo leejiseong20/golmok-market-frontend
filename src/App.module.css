@@ -86,3 +86,5 @@
   .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 22px; }
   .title { font-size: 40px; }
 }
+.writeButton { position: fixed; right: max(20px, calc((100vw - 1200px) / 2)); bottom: 88px; z-index: 5; padding: 14px 20px; border: 0; border-radius: 28px; color: white; background: var(--accent); box-shadow: 0 4px 16px #17140f33; font-weight: 700; }
+@media (min-width: 880px) { .writeButton { bottom: 32px; } }

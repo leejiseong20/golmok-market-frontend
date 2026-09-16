@@ -2,6 +2,31 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createApiClient } from "./client.js";
 
+test("이미지 업로드는 FormData와 브라우저의 multipart 경계를 유지한다", async () => {
+  const body = new FormData(); body.append("files", new Blob(["photo"], { type: "image/png" }), "photo.png");
+  const client = createApiClient({ fetchImpl: async (_, options) => {
+    assert.equal(options.headers["Content-Type"], undefined);
+    assert.equal(options.body, body);
+    assert.equal(await options.body.get("files").text(), "photo");
+    return Response.json({ imageUrls: ["/api/images/photo.png"] });
+  } });
+  await client.request("/images", { method: "POST", body });
+});
+
+test("업로드 중 토큰 만료 시 파일 본문을 보존해 재시도한다", async () => {
+  const body = new FormData(); body.append("files", new Blob(["photo"]), "photo.png");
+  let attempts = 0;
+  const client = createApiClient({ storage: storage(), fetchImpl: async (url, options) => {
+    if (url.endsWith("/auth/reissue")) return Response.json(rotated);
+    attempts++;
+    assert.equal(options.body, body);
+    assert.equal(options.headers["Content-Type"], undefined);
+    return attempts === 1 ? expired() : Response.json({ imageUrls: ["/api/images/photo.png"] });
+  } });
+  await client.request("/images", { method: "POST", body });
+  assert.equal(attempts, 2);
+});
+
 const original = { accessToken: "old-access", refreshToken: "old-refresh", user: { id: 1, nickname: "사용자" } };
 const rotated = { accessToken: "new-access", refreshToken: "new-refresh" };
 const expired = () => Response.json({ code: "EXPIRED_TOKEN", message: "만료" }, { status: 401 });

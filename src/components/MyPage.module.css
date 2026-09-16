@@ -125,3 +125,5 @@
 }
 
 .purchases { display: flex; flex-direction: column; }
+.filter { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+.filter select { padding: 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); }

@@ -1,0 +1,15 @@
+.form, .fields { display: grid; gap: 16px; }
+.fields { border: 0; margin: 0; padding: 0; min-width: 0; }
+.fields label { display: grid; gap: 8px; font-weight: 600; }
+.fields input, .fields select, .fields textarea { width: 100%; min-width: 0; box-sizing: border-box; padding: 12px; border: 1px solid var(--line-strong); border-radius: 10px; font: inherit; background: var(--surface); color: var(--ink); }
+.fields textarea { resize: vertical; }
+.fields .check { display: flex; align-items: center; }
+.check input { width: auto; }
+.photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0; list-style: none; }
+.photos li { min-width: 0; }
+.photos img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; }
+.photos li div { display: flex; gap: 6px; margin-top: 5px; }
+.photos button { padding: 8px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; }
+.note { font-size: 13px; color: var(--ink-4); }
+.error { padding: 12px; border-radius: 10px; color: #a12c1e; background: #fff0eb; overflow-wrap: anywhere; }
+.submit { padding: 14px; border: 0; border-radius: 10px; color: white; background: var(--accent); font: inherit; font-weight: 700; }

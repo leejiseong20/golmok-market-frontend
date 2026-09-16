@@ -7,6 +7,7 @@ import BottomNav from "./components/BottomNav.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import RegionPicker from "./components/RegionPicker.jsx";
 import ProductDetail from "./components/ProductDetail.jsx";
+import ProductForm from "./components/ProductForm.jsx";
 import MyPage from "./components/MyPage.jsx";
 import { client } from "./api/client.js";
 import { logout } from "./api/authApi.js";
@@ -37,6 +38,8 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [view, setView] = useState("home");
   const [detail, setDetail] = useState(null);
+  const [editor, setEditor] = useState(null);
+  const [productRevision, setProductRevision] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
   const [accountError, setAccountError] = useState("");
   const feedVersion = useRef(0);
@@ -70,7 +73,7 @@ export default function App() {
   }, [region?.id, categoryId, sort, keyword, retry, user?.id]);
 
   useEffect(() => {
-    detailController.current?.abort(); setDetail(null);
+    detailController.current?.abort(); setDetail(null); setEditor(null);
     return () => detailController.current?.abort();
   }, [user?.id]);
 
@@ -151,10 +154,12 @@ export default function App() {
     try { localStorage.setItem("golmok.region", JSON.stringify(value)); } catch { /* 메모리에서 선택 유지 */ }
   }
   function home() {
+    setEditor(null);
     detailController.current?.abort(); setDetail(null); setModal(null); setView("home");
     setKeyword(""); setSearch(""); setCategoryId(null); setSort("LATEST"); setRetry((value) => value + 1);
   }
   function myPage() {
+    setEditor(null);
     detailController.current?.abort(); setDetail(null); setModal(null); setAccountError(""); setView("my");
   }
   async function signOut() {
@@ -167,6 +172,16 @@ export default function App() {
     onLogin: () => { setAccountError(""); setModal("auth"); }, onLogout: signOut, loggingOut };
   const categoryBar = <CategoryBar categories={categories} value={categoryId} onChange={setCategoryId} />;
 
+  function productChanged(product) {
+    setProductRevision((value) => value + 1);
+    setRetry((value) => value + 1);
+    setDetail({ id: product.id, data: product, loading: false, error: "" });
+  }
+  function writeProduct() {
+    if (!user) { setModal("auth"); return; }
+    detailController.current?.abort(); setDetail(null); setEditor({ product: null });
+  }
+
   return <>
     <Header {...navigation} region={region} search={search} onSearchChange={setSearch}
       onSearch={(event) => { event.preventDefault(); setKeyword(search.trim()); setRetry((value) => value + 1); }}>
@@ -174,7 +189,7 @@ export default function App() {
     </Header>
     {view === "home" && <div className={styles.mobileOnly}>{categoryBar}</div>}
     {view === "my"
-      ? <MyPage user={user} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite} onRegionsChange={applyPrimaryRegion}
+      ? <MyPage key={user?.id ?? "guest"} user={user} refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite} onRegionsChange={applyPrimaryRegion}
           onLogin={() => { setAccountError(""); setModal("auth"); }} />
       : <main className={styles.shell}>
       <section aria-label="상품 목록">
@@ -200,9 +215,14 @@ export default function App() {
       <Sidebar onRegionClick={navigation.onRegionClick} />
     </main>}
     <BottomNav {...navigation} />
+    <button className={styles.writeButton} onClick={writeProduct}>＋ 상품 등록</button>
     <footer className={styles.footer + " " + styles.pcOnly}><div className={styles.footerInner}><span>골목마켓 · 동네 기반 중고거래 플랫폼</span><span>이웃의 물건에 새로운 일상을</span></div></footer>
     {modal === "auth" && <AuthModal onClose={() => setModal(null)} />}
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
-    {detail && <ProductDetail key={detail.id} detail={detail} onClose={() => { detailController.current?.abort(); setDetail(null); }} onRetry={() => openProduct(detail.id)} />}
+    {detail && <ProductDetail key={detail.id} detail={detail} onClose={() => { detailController.current?.abort(); setDetail(null); }} onRetry={() => openProduct(detail.id)}
+      onEdit={(product) => { setDetail(null); setEditor({ product }); }} onChanged={productChanged}
+      onDeleted={() => { setDetail(null); setProductRevision((v) => v + 1); setRetry((v) => v + 1); }} />}
+    {editor && <ProductForm key={editor.product?.id ?? "new"} product={editor.product} categories={categories}
+      onClose={() => setEditor(null)} onVerifyRegion={myPage} onSaved={(product) => { setEditor(null); productChanged(product); }} />}
   </>;
 }
