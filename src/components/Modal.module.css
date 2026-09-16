@@ -1,0 +1,30 @@
+.dialog { border: 1px solid var(--line); border-radius: 20px; padding: 0; width: min(560px, calc(100% - 24px)); max-height: calc(100dvh - 32px); background: var(--surface); color: var(--ink); box-shadow: 0 24px 80px #17140f33; }
+.dialog::backdrop { background: #17140f88; }
+.content { padding: 24px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.header h2 { font-size: 22px; }
+.header button { border: none; background: var(--surface-2); border-radius: 50%; width: 36px; height: 36px; font-size: 26px; }
+.form { display: grid; gap: 16px; }
+.field { display: grid; gap: 7px; font-size: 14px; font-weight: 600; }
+.field input { width: 100%; min-width: 0; border: 1px solid var(--line-strong); border-radius: 10px; background: white; padding: 12px; font: inherit; color: var(--ink); }
+.error { color: #a12c1e; background: #fff0eb; border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.fieldError { color: #a12c1e; font-weight: 400; font-size: 13px; }
+.note { color: var(--ink-4); font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
+.success { color: #256642; background: #eef7f0; padding: 12px; border-radius: 10px; margin-bottom: 16px; }
+.primary, .secondary { padding: 12px 16px; border: 1px solid var(--line-strong); border-radius: 10px; font-size: 14px; font-weight: 600; }
+.primary { color: white; background: var(--accent); border-color: var(--accent); }
+.secondary { color: var(--ink-2); background: var(--surface-2); }
+.switch { width: 100%; margin-top: 20px; background: none; border: none; text-decoration: underline; color: var(--ink-3); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+.results { list-style: none; padding: 0; display: grid; gap: 10px; }
+.results button { width: 100%; text-align: left; border: 1px solid var(--line); background: white; padding: 16px; border-radius: 10px; color: var(--ink); }
+.results strong, .results small { display: block; }
+.results small { margin-top: 5px; color: var(--ink-4); }
+.gallery { aspect-ratio: 4/3; display: grid; place-items: center; background: var(--surface-2); border-radius: 12px; overflow: hidden; color: var(--ink-4); }
+.gallery img { width: 100%; height: 100%; object-fit: contain; min-height: 0; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 12px 0; font-size: 14px; }
+.productTitle { font-size: 24px; margin: 18px 0 8px; overflow-wrap: anywhere; }
+.price { font-size: 26px; font-weight: 700; margin: 12px 0; }
+.description { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; margin: 20px 0; }
+.seller { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; display: grid; gap: 6px; }
+.tag { display: inline-block; padding: 5px 10px; border-radius: 8px; background: var(--surface-2); font-size: 13px; margin-right: 8px; }

@@ -1,0 +1,39 @@
+:root {
+  --accent: #d2502f;
+  --accent-soft: #d2502f14;
+  --accent-border: #d2502f3d;
+
+  --bg: #faf8f6;
+  --surface: #fffdfb;
+  --surface-2: #f4f0ec;
+  --line: #ece6e0;
+  --line-strong: #e2dbd4;
+
+  --ink: #17140f;
+  --ink-2: #3b342b;
+  --ink-3: #5a5148;
+  --ink-4: #6b6156;
+
+  --radius-sm: 10px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shell-max: 1180px;
+  --bp-pc: 880px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+}
+
+a { color: var(--ink); text-decoration: none; }
+a:hover { color: var(--accent); }
+button { font-family: inherit; cursor: pointer; }
+button:disabled { cursor: wait; opacity: .55; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+input, select { font-family: inherit; }
+h1, h2, h3, p, ul { margin: 0; }

@@ -1,0 +1,63 @@
+import { useRef, useState } from "react";
+import { login, signup } from "../api/authApi.js";
+import Modal from "./Modal.jsx";
+import styles from "./Modal.module.css";
+
+export default function AuthModal({ onClose }) {
+  const [mode, setMode] = useState("login");
+  const [fields, setFields] = useState({ email: "", password: "", nickname: "" });
+  const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
+  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [message, setMessage] = useState("");
+  const isSignup = mode === "signup";
+  async function submit(event) {
+    event.preventDefault();
+    if (pending.current) return;
+    setError(""); setErrors({}); setMessage("");
+    if (isSignup && !/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9])[!-~]{8,64}$/.test(fields.password)) {
+      setErrors({ password: "영문·숫자·특수문자를 포함한 8~64자로 입력해 주세요. 공백·한글은 사용할 수 없습니다." });
+      return;
+    }
+    pending.current = true; setBusy(true);
+    try {
+      const email = fields.email.trim();
+      if (isSignup) {
+        await signup({ ...fields, email, nickname: fields.nickname.trim() });
+        setMode("login"); setFields((old) => ({ ...old, password: "" }));
+        setMessage("가입이 완료됐습니다. 로그인해 주세요.");
+      } else {
+        await login({ email, password: fields.password });
+        onClose();
+      }
+    } catch (failure) {
+      setError(failure.message);
+      const fieldErrors = Object.fromEntries((failure.errors ?? []).map(({ field, reason }) => [field, reason]));
+      if (failure.code === "DUPLICATE_EMAIL") fieldErrors.email = failure.message;
+      if (failure.code === "DUPLICATE_NICKNAME") fieldErrors.nickname = failure.message;
+      setErrors(fieldErrors);
+    } finally { pending.current = false; setBusy(false); }
+  }
+  function field(name, label, props) {
+    return <label className={styles.field}>{label}
+      <input name={name} value={fields[name]} onChange={(e) => setFields({ ...fields, [name]: e.target.value })}
+        disabled={busy} required aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `${name}-error` : undefined} {...props} />
+      {errors[name] && <span className={styles.fieldError} id={`${name}-error`}>{errors[name]}</span>}
+    </label>;
+  }
+  return <Modal title={isSignup ? "회원가입" : "로그인"} onClose={onClose} busy={busy}>
+    <p className={styles.note}>가까운 이웃과 골목마켓을 시작해 보세요.</p>
+    {message && <p className={styles.success} role="status">{message}</p>}
+    <form className={styles.form} onSubmit={submit}>
+      {field("email", "이메일", { type: "email", maxLength: 100, autoComplete: "username" })}
+      {field("password", "비밀번호", { type: "password", maxLength: 64, autoComplete: isSignup ? "new-password" : "current-password" })}
+      {isSignup && field("nickname", "닉네임", { minLength: 2, maxLength: 30, autoComplete: "nickname" })}
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      <button className={styles.primary} disabled={busy}>{busy ? "처리 중…" : isSignup ? "가입하기" : "로그인하기"}</button>
+    </form>
+    <button className={styles.switch} disabled={busy} onClick={() => {
+      setMode(isSignup ? "login" : "signup"); setError(""); setErrors({}); setMessage("");
+    }}>{isSignup ? "이미 계정이 있어요 · 로그인" : "처음 오셨나요? 회원가입"}</button>
+  </Modal>;
+}

@@ -1,0 +1,104 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.inner {
+  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: 10px 16px;
+}
+
+.logo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 0; border: none; background: none; color: var(--ink); }
+.mark { width: 26px; height: 26px; border-radius: 9px; background: var(--accent); }
+.wordmark { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+
+.region {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); }
+
+.search {
+  order: 4;
+  flex-basis: 100%;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.searchIcon { color: var(--ink-4); font-size: 15px; }
+.search button { background: none; border: none; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.account { margin-left: auto; display: flex; gap: 10px; align-items: center; font-size: 13px; }
+.account button { border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); padding: 8px; white-space: nowrap; }
+.nickname { display: none; }
+
+.gnb { display: none; }
+
+.catRow { display: none; }
+
+@media (min-width: 880px) {
+  .inner { padding: 16px 24px; gap: 24px; flex-wrap: nowrap; }
+  .search { order: 0; flex-basis: auto; }
+  .nickname { display: inline; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .gnb {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex-shrink: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink-3);
+  }
+
+  .cta {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 11px 18px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .catRow {
+    display: block;
+    border-top: 1px solid #f1ebe5;
+    max-width: var(--shell-max);
+    margin: 0 auto;
+    padding: 12px 24px;
+  }
+}
