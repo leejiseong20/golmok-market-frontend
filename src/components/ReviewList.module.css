@@ -1,0 +1,7 @@
+.list { display: grid; gap: 12px; }
+.card { border: 1px solid var(--line); border-radius: 14px; padding: 18px; background: #fff; }
+.card header { display: flex; justify-content: space-between; gap: 12px; }
+.card header span { color: var(--accent); white-space: nowrap; }
+.card p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
+.card time { display: block; color: var(--ink-4); font-size: 12px; margin-top: 12px; }
+.more { justify-self: center; padding: 10px 24px; border: 1px solid var(--line-strong); background: white; border-radius: 10px; cursor: pointer; }

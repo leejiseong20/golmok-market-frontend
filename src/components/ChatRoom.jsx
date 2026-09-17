@@ -3,6 +3,7 @@ import {
   cancelReservation, completeTrade, fetchChatRoom, fetchMessages, leaveChatRoom, markChatRead, reserveTrade, sendMessage,
 } from "../api/chatApi.js";
 import { chatSocket } from "../api/chatSocket.js";
+import ReviewForm from "./ReviewForm.jsx";
 import { formatChatDay, formatChatTime, formatPrice, statusLabel, tradeStatusLabel } from "../data/format.js";
 import styles from "./ChatRoom.module.css";
 
@@ -31,7 +32,8 @@ const dayOf = (value) => value?.slice(0, 10);
  * 이미 불러온 이전 메시지와 이어 붙이지 않고 바꾸는 이유: 끊긴 동안 메시지가 한 페이지보다 많이 오면
  * 중간이 빈 채로 이어 붙게 된다.
  */
-export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct }) {
+export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, onOpenProfile }) {
+  const [reviewing, setReviewing] = useState(false);
   const [info, setInfo] = useState({ data: null, loading: true, error: "" });
   const [messages, setMessages] = useState(emptyMessages);
   const [reload, setReload] = useState(0);
@@ -225,7 +227,8 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct }) 
     <header className={styles.header}>
       <button className={styles.back} onClick={onBack} aria-label="채팅 목록으로">←</button>
       <div className={styles.who}>
-        <strong>{room?.opponent.nickname ?? "…"}</strong>
+        <button onClick={() => onOpenProfile(room.opponent.id)} disabled={!room} aria-label="상대 프로필 보기">
+          <strong>{room?.opponent.nickname ?? "…"}</strong></button>
         {room && <span>매너온도 {Number(room.opponent.mannerTemp).toFixed(1)}°C</span>}
       </div>
       <button className={styles.leave} onClick={leave} disabled={leaving || !room}>{leaving ? "나가는 중…" : "나가기"}</button>
@@ -248,6 +251,7 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct }) 
         {room.trade ? tradeStatusLabel(room.trade.status) : "이 구매자와 거래를 시작할 수 있어요"}
       </span>
       <span className={styles.tradeButtons}>
+        {room.tradeActions.review && <button className={styles.tradePrimary} onClick={() => setReviewing(true)}>후기 남기기</button>}
         {room.tradeActions.reserve && <button className={styles.tradePrimary} disabled={tradePending} onClick={() => tradeAction("reserve")}>예약하기</button>}
         {room.tradeActions.complete && <button className={styles.tradePrimary} disabled={tradePending} onClick={() => tradeAction("complete")}>거래완료</button>}
         {room.tradeActions.cancel && <button className={styles.tradeSecondary} disabled={tradePending} onClick={() => tradeAction("cancel")}>예약 취소</button>}
@@ -255,6 +259,8 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct }) 
       {tradeError && <p className={styles.tradeError} role="alert">{tradeError}</p>}
     </section>}
 
+    {reviewing && room && <ReviewForm tradeId={room.trade.id} nickname={room.opponent.nickname}
+      onClose={() => setReviewing(false)} onSaved={() => { setReviewing(false); setInfoReload((n) => n + 1); }} />}
     <div className={styles.messages} ref={scroller} onScroll={onScroll} aria-live="polite">
       {messages.hasNext && <button className={styles.older} onClick={loadOlder} disabled={messages.loadingOlder}>
         {messages.loadingOlder ? "불러오는 중…" : "이전 메시지 보기"}</button>}

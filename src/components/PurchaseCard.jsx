@@ -2,7 +2,7 @@ import { useState } from "react";
 import { formatPrice, formatDate, tradeStatusLabel } from "../data/format.js";
 import styles from "./PurchaseCard.module.css";
 
-export default function PurchaseCard({ purchase, onOpenProduct, onConfirm }) {
+export default function PurchaseCard({ purchase, onOpenProduct, onConfirm, onReview }) {
   const [failed, setFailed] = useState(false);
   const [pending, setPending] = useState(false);
   const { product, seller } = purchase;
@@ -43,6 +43,7 @@ export default function PurchaseCard({ purchase, onOpenProduct, onConfirm }) {
     </div>
 
     {(purchase.canConfirm || purchase.completedAt) && <div className={styles.foot}>
+      {purchase.canReview && <button className={styles.confirm} onClick={() => onReview(purchase)}>후기 남기기</button>}
       {purchase.canConfirm
         ? <button className={styles.confirm} onClick={confirm} disabled={pending}>
             {pending ? "처리 중…" : "구매확정"}</button>

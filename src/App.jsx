@@ -10,6 +10,7 @@ import ProductDetail from "./components/ProductDetail.jsx";
 import ProductForm from "./components/ProductForm.jsx";
 import MyPage from "./components/MyPage.jsx";
 import ChatPage from "./components/ChatPage.jsx";
+import UserProfile from "./components/UserProfile.jsx";
 import { client } from "./api/client.js";
 import { chatSocket } from "./api/chatSocket.js";
 import { openChatRoom } from "./api/chatApi.js";
@@ -44,6 +45,7 @@ export default function App() {
   const [chatEntry, setChatEntry] = useState(0);
   const [detail, setDetail] = useState(null);
   const [editor, setEditor] = useState(null);
+  const [profileId, setProfileId] = useState(null);
   const [productRevision, setProductRevision] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
   const [accountError, setAccountError] = useState("");
@@ -85,7 +87,7 @@ export default function App() {
   }, [user?.id]);
 
   useEffect(() => {
-    detailController.current?.abort(); setDetail(null); setEditor(null);
+    detailController.current?.abort(); setDetail(null); setEditor(null); setProfileId(null);
     return () => detailController.current?.abort();
   }, [user?.id]);
 
@@ -218,7 +220,7 @@ export default function App() {
     {view === "home" && <div className={styles.mobileOnly}>{categoryBar}</div>}
     {view === "chat"
       ? <ChatPage key={`${user?.id ?? "guest"}-${chatEntry}`} user={user} initialRoomId={chatRoomId}
-          onOpenProduct={openProduct} onLogin={() => { setAccountError(""); setModal("auth"); }} />
+          onOpenProduct={openProduct} onOpenProfile={setProfileId} onLogin={() => { setAccountError(""); setModal("auth"); }} />
       : view === "my"
       ? <MyPage key={user?.id ?? "guest"} user={user} refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite} onRegionsChange={applyPrimaryRegion}
           onLogin={() => { setAccountError(""); setModal("auth"); }} />
@@ -252,9 +254,10 @@ export default function App() {
     {modal === "auth" && <AuthModal onClose={() => setModal(null)} />}
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
     {detail && <ProductDetail key={detail.id} detail={detail} onClose={() => { detailController.current?.abort(); setDetail(null); }} onRetry={() => openProduct(detail.id)}
-      onEdit={(product) => { setDetail(null); setEditor({ product }); }} onChanged={productChanged} onStartChat={startChat}
+      onEdit={(product) => { setDetail(null); setEditor({ product }); }} onChanged={productChanged} onStartChat={startChat} onOpenProfile={setProfileId}
       onDeleted={() => { setDetail(null); setProductRevision((v) => v + 1); setRetry((v) => v + 1); }} />}
     {editor && <ProductForm key={editor.product?.id ?? "new"} product={editor.product} categories={categories}
       onClose={() => setEditor(null)} onVerifyRegion={myPage} onSaved={(product) => { setEditor(null); productChanged(product); }} />}
+    {profileId && <UserProfile key={profileId} userId={profileId} onClose={() => setProfileId(null)} />}
   </>;
 }

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ProductCard from "./ProductCard.jsx";
 import PurchaseCard from "./PurchaseCard.jsx";
 import MyRegions from "./MyRegions.jsx";
+import ReviewForm from "./ReviewForm.jsx";
+import ReviewList from "./ReviewList.jsx";
 import { fetchMe, fetchMyFavorites } from "../api/userApi.js";
 import { confirmPurchase, fetchMyPurchases } from "../api/tradeApi.js";
 import { fetchMyProducts } from "../api/productApi.js";
@@ -11,6 +13,7 @@ const TABS = [
   { id: "favorites", label: "찜한 상품" },
   { id: "purchases", label: "구매내역" },
   { id: "sales", label: "판매내역" },
+  { id: "reviews", label: "받은 후기" },
 ];
 const emptyList = { items: [], cursor: null, hasNext: false, loading: true, loadingMore: false, error: "" };
 
@@ -28,6 +31,7 @@ export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin,
   const [retry, setRetry] = useState(0);
   const [actionError, setActionError] = useState("");
   const [saleStatus, setSaleStatus] = useState("");
+  const [review, setReview] = useState(null);
   const moreController = useRef(null);
   const morePending = useRef(false);
 
@@ -46,13 +50,14 @@ export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin,
       .then((data) => { if (!abort.signal.aborted) setProfile(data); })
       .catch((error) => { if (!abort.signal.aborted) setProfileError(error.message); });
     return () => abort.abort();
-  }, [user?.id, retry]);
+  }, [user?.id, retry, refreshKey]);
 
   useEffect(() => {
     if (!user) return undefined;
     const abort = new AbortController();
     moreController.current?.abort();
     morePending.current = false;
+    if (tab === "reviews") return () => abort.abort();
     setActionError("");
     setList({ ...emptyList, loading: true });
     load({ signal: abort.signal })
@@ -140,7 +145,7 @@ export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin,
         onClick={() => { setTab(id); setList({ ...emptyList, loading: true }); }}>{label}</button>)}
     </div>
 
-    <section aria-label={TABS.find((item) => item.id === tab).label}>
+    {tab === "reviews" ? <ReviewList key={`${user.id}-${retry}`} userId={user.id} /> : <section aria-label={TABS.find((item) => item.id === tab).label}>
       {tab === "sales" && <label className={styles.filter}>판매 상태 <select aria-label="판매 상태" value={saleStatus} onChange={(e) => {
         moreController.current?.abort(); setSaleStatus(e.target.value); setList({ ...emptyList, loading: true });
       }}><option value="">전체</option><option value="ON_SALE">판매중</option><option value="RESERVED">예약중</option><option value="SOLD">판매완료</option></select></label>}
@@ -160,11 +165,13 @@ export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin,
           </div>
         : <div className={styles.purchases}>
             {list.items.map((purchase) => <PurchaseCard key={purchase.tradeId} purchase={purchase}
-              onOpenProduct={onOpenProduct} onConfirm={confirm} />)}
+              onOpenProduct={onOpenProduct} onConfirm={confirm} onReview={setReview} />)}
           </div>}
 
       {list.hasNext && <button className={styles.more} onClick={more} disabled={list.loadingMore}>
         {list.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
-    </section>
+    </section>}
+    {review && <ReviewForm tradeId={review.tradeId} nickname={review.seller.nickname}
+      onClose={() => setReview(null)} onSaved={() => { setReview(null); setRetry((n) => n + 1); }} />}
   </main>;
 }

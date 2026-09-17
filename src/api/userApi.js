@@ -1,6 +1,7 @@
 import { client } from "./client.js";
 
 export const fetchMe = (signal) => client.request("/users/me", { signal });
+export const fetchProfile = (id, signal) => client.request(`/users/${encodeURIComponent(id)}`, { signal });
 
 export function fetchMyFavorites({ cursor, signal } = {}) {
   const query = new URLSearchParams({ size: 20 });

@@ -9,7 +9,7 @@ import styles from "./ChatPage.module.css";
  * 선택한 방은 이 컴포넌트가 들고 있고, 목록과 방은 서로를 모른다.
  * 둘 다 같은 WebSocket 이벤트를 각자 구독해 자기 상태만 맞춘다(한쪽이 다른 쪽을 갱신하지 않는다).
  */
-export default function ChatPage({ user, initialRoomId = null, onLogin, onOpenProduct }) {
+export default function ChatPage({ user, initialRoomId = null, onLogin, onOpenProduct, onOpenProfile }) {
   const [roomId, setRoomId] = useState(initialRoomId);
   const [listRevision, setListRevision] = useState(0);
 
@@ -31,7 +31,7 @@ export default function ChatPage({ user, initialRoomId = null, onLogin, onOpenPr
     <section className={styles.roomPane} aria-label="채팅방">
       {roomId
         ? <ChatRoom key={roomId} roomId={roomId} me={user.id} onBack={() => setRoomId(null)}
-            onOpenProduct={onOpenProduct}
+            onOpenProduct={onOpenProduct} onOpenProfile={onOpenProfile}
             // 나간 방은 목록에서 사라져야 하므로 목록을 새로 불러온다.
             onLeft={() => { setRoomId(null); setListRevision((value) => value + 1); }} />
         : <p className={styles.placeholder}>대화할 채팅방을 선택해 주세요.</p>}
