@@ -11,9 +11,11 @@ import ProductForm from "./components/ProductForm.jsx";
 import MyPage from "./components/MyPage.jsx";
 import ChatPage from "./components/ChatPage.jsx";
 import UserProfile from "./components/UserProfile.jsx";
+import NotificationPanel from "./components/NotificationPanel.jsx";
 import { client } from "./api/client.js";
 import { chatSocket } from "./api/chatSocket.js";
 import { openChatRoom } from "./api/chatApi.js";
+import { fetchUnreadCount, resolveTarget } from "./api/notificationApi.js";
 import { logout } from "./api/authApi.js";
 import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavorite } from "./api/productApi.js";
 import styles from "./App.module.css";
@@ -43,6 +45,9 @@ export default function App() {
   const [view, setView] = useState("home");
   const [chatRoomId, setChatRoomId] = useState(null);
   const [chatEntry, setChatEntry] = useState(0);
+  const [myTab, setMyTab] = useState("favorites");
+  const [myEntry, setMyEntry] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [detail, setDetail] = useState(null);
   const [editor, setEditor] = useState(null);
   const [profileId, setProfileId] = useState(null);
@@ -84,6 +89,26 @@ export default function App() {
     if (!user) return undefined;
     chatSocket.start();
     return () => chatSocket.stop();
+  }, [user?.id]);
+
+  // 알림 뱃지. 로그인 시·소켓 (재)연결 시 서버 값으로 맞추고, 그 사이에는 실시간 알림 이벤트로 1씩 올린다.
+  // 끊긴 동안 온 알림은 이벤트로 다시 오지 않으므로 재연결 때 다시 센다.
+  useEffect(() => {
+    setUnreadCount(0);
+    if (!user) return undefined;
+    let abort = new AbortController();
+    const load = () => {
+      abort.abort(); abort = new AbortController();
+      const signal = abort.signal;
+      fetchUnreadCount(signal).then((data) => { if (!signal.aborted) setUnreadCount(data.count); })
+        .catch(() => { /* 뱃지는 부가 정보다. 다음 연결·알림 때 다시 맞춘다. */ });
+    };
+    load();
+    const offConnected = chatSocket.onConnected(load);
+    const offEvent = chatSocket.onEvent((event) => {
+      if (event.type === "NOTIFICATION") setUnreadCount((value) => value + 1);
+    });
+    return () => { abort.abort(); offConnected(); offEvent(); };
   }, [user?.id]);
 
   useEffect(() => {
@@ -172,9 +197,11 @@ export default function App() {
     detailController.current?.abort(); setDetail(null); setModal(null); setView("home");
     setKeyword(""); setSearch(""); setCategoryId(null); setSort("LATEST"); setRetry((value) => value + 1);
   }
-  function myPage() {
+  /** 마이페이지로. tab 을 주면 그 탭으로 연다(알림에서 받은 후기로 이동할 때). */
+  function myPage(tab = "favorites") {
     setEditor(null);
-    detailController.current?.abort(); setDetail(null); setModal(null); setAccountError(""); setView("my");
+    detailController.current?.abort(); setDetail(null); setModal(null); setAccountError("");
+    setMyTab(typeof tab === "string" ? tab : "favorites"); setMyEntry((value) => value + 1); setView("my");
   }
   /** 채팅 화면으로. roomId 가 있으면 그 방을 연다. 같은 방을 다시 눌러도 화면을 새로 그리도록 진입 번호를 올린다. */
   function chat(roomId = null) {
@@ -192,13 +219,21 @@ export default function App() {
     const room = await openChatRoom(product.id);
     chat(room.roomId);
   }
+  /** 알림의 이동 경로를 화면으로 연다. 모르는 경로면 알림함만 닫는다. */
+  function openNotificationTarget(targetUrl) {
+    const target = resolveTarget(targetUrl);
+    setModal(null);
+    if (target?.kind === "product") openProduct(target.id);
+    else if (target?.kind === "chat") chat(target.id);
+    else if (target?.kind === "myReviews") myPage("reviews");
+  }
   async function signOut() {
     if (logoutPending.current) return;
     logoutPending.current = true; setLoggingOut(true); setAccountError("");
     try { await logout(); } catch (error) { setAccountError(error.message); }
     finally { logoutPending.current = false; setLoggingOut(false); }
   }
-  const navigation = { user, onHome: home, onRegionClick: () => setModal("region"), onMyPage: myPage, onChat: () => chat(), view,
+  const navigation = { user, onHome: home, onRegionClick: () => setModal("region"), onMyPage: () => myPage(), onChat: () => chat(), view,
     onLogin: () => { setAccountError(""); setModal("auth"); }, onLogout: signOut, loggingOut };
   const categoryBar = <CategoryBar categories={categories} value={categoryId} onChange={setCategoryId} />;
 
@@ -214,6 +249,7 @@ export default function App() {
 
   return <>
     <Header {...navigation} region={region} search={search} onSearchChange={setSearch}
+      unreadCount={unreadCount} onNotifications={() => { setAccountError(""); setModal("notifications"); }}
       onSearch={(event) => { event.preventDefault(); setKeyword(search.trim()); setRetry((value) => value + 1); }}>
       {categoryBar}
     </Header>
@@ -222,7 +258,7 @@ export default function App() {
       ? <ChatPage key={`${user?.id ?? "guest"}-${chatEntry}`} user={user} initialRoomId={chatRoomId}
           onOpenProduct={openProduct} onOpenProfile={setProfileId} onLogin={() => { setAccountError(""); setModal("auth"); }} />
       : view === "my"
-      ? <MyPage key={user?.id ?? "guest"} user={user} refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite} onRegionsChange={applyPrimaryRegion}
+      ? <MyPage key={`${user?.id ?? "guest"}-${myEntry}`} user={user} initialTab={myTab} refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite} onRegionsChange={applyPrimaryRegion}
           onLogin={() => { setAccountError(""); setModal("auth"); }} />
       : <main className={styles.shell}>
       <section aria-label="상품 목록">
@@ -253,6 +289,8 @@ export default function App() {
     <footer className={styles.footer + " " + styles.pcOnly}><div className={styles.footerInner}><span>골목마켓 · 동네 기반 중고거래 플랫폼</span><span>이웃의 물건에 새로운 일상을</span></div></footer>
     {modal === "auth" && <AuthModal onClose={() => setModal(null)} />}
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
+    {modal === "notifications" && user && <NotificationPanel onClose={() => setModal(null)} onNavigate={openNotificationTarget}
+      onRead={() => setUnreadCount((value) => Math.max(0, value - 1))} onAllRead={() => setUnreadCount(0)} />}
     {detail && <ProductDetail key={detail.id} detail={detail} onClose={() => { detailController.current?.abort(); setDetail(null); }} onRetry={() => openProduct(detail.id)}
       onEdit={(product) => { setDetail(null); setEditor({ product }); }} onChanged={productChanged} onStartChat={startChat} onOpenProfile={setProfileId}
       onDeleted={() => { setDetail(null); setProductRevision((v) => v + 1); setRetry((v) => v + 1); }} />}

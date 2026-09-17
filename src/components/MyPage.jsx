@@ -23,8 +23,9 @@ const emptyList = { items: [], cursor: null, hasNext: false, loading: true, load
  * 탭을 바꿀 때마다 서버에서 다시 받는다. 다른 기기에서 찜하거나 거래 상태가 바뀐 것까지 반영된다.
  * 판매내역은 상품 카드와 생성 시각 커서를 사용한다. 탭 변경 시 이전 목록을 즉시 비운다.
  */
-export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin, onRegionsChange, refreshKey = 0 }) {
-  const [tab, setTab] = useState("favorites");
+export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin, onRegionsChange, refreshKey = 0, initialTab = "favorites" }) {
+  // 알림("새 후기를 받았어요")에서 들어오면 받은 후기 탭으로 바로 연다.
+  const [tab, setTab] = useState(TABS.some((item) => item.id === initialTab) ? initialTab : "favorites");
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
   const [list, setList] = useState(emptyList);
