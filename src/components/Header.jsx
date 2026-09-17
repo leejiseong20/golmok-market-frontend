@@ -1,6 +1,6 @@
 import styles from "./Header.module.css";
 
-export default function Header({ region, onRegionClick, user, onLogin, onLogout, loggingOut, search, onSearchChange, onSearch, onHome, onMyPage, children }) {
+export default function Header({ region, onRegionClick, user, onLogin, onLogout, loggingOut, search, onSearchChange, onSearch, onHome, onMyPage, onChat, children }) {
   return <header className={styles.header}>
     <div className={styles.inner}>
       <button className={styles.logo} onClick={onHome} aria-label="골목마켓 홈"><span className={styles.mark} /><span className={styles.wordmark}>골목마켓</span></button>
@@ -10,6 +10,7 @@ export default function Header({ region, onRegionClick, user, onLogin, onLogout,
         <button type="submit">검색</button>
       </form>
       <div className={styles.account}>{user && <span className={styles.nickname}>{user.nickname}님</span>}
+        <button onClick={onChat}>채팅</button>
         <button onClick={onMyPage}>나의 골목</button>
         <button onClick={user ? onLogout : onLogin} disabled={loggingOut}>{loggingOut ? "처리 중…" : user ? "로그아웃" : "로그인"}</button>
       </div>

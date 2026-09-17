@@ -22,3 +22,19 @@ export const tradeStatusLabel = (status) => ({
   REQUESTED: "거래 요청", PAID: "결제 완료", SHIPPING: "배송 중",
   CONFIRMED: "구매 확정", CANCELED: "거래 취소", REFUNDED: "환불 완료",
 }[status] ?? status);
+
+/** 채팅 메시지 옆 시각. "오후 3:20" */
+export function formatChatTime(value) {
+  const date = koreaDate(value);
+  return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul", hour: "numeric", minute: "2-digit",
+  }).format(date);
+}
+
+/** 채팅방의 날짜 구분선. "2026년 9월 17일 목요일" */
+export function formatChatDay(value) {
+  const date = koreaDate(value);
+  return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul", dateStyle: "full",
+  }).format(date);
+}

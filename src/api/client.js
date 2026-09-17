@@ -110,6 +110,8 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
     getSession: () => session,
     subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener); },
     clearSession,
+    // 채팅 소켓이 EXPIRED_TOKEN 으로 거부될 때 쓴다. 따로 재발급하면 동시 재발급으로 한쪽 토큰이 폐기되므로 같은 비행을 공유한다.
+    refreshTokens: refresh,
     async login(credentials) {
       const started = generation;
       const result = await send("/auth/login", { method: "POST", body: credentials });

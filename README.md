@@ -12,13 +12,13 @@ npm install
 npm run dev     # http://127.0.0.1:5173
 ```
 
-`/api` 요청은 `vite.config.js`에서 백엔드로 프록시된다. 환경값은 `.env.example`을 복사해 `.env`로 쓰고, `.env`는 커밋하지 않는다.
+`/api` 요청은 `vite.config.js`에서 백엔드로 프록시된다. 채팅 WebSocket(`/api/ws`)도 같은 프록시를 탄다(`ws: true`). 환경값은 `.env.example`을 복사해 `.env`로 쓰고, `.env`는 커밋하지 않는다.
 
 | 스크립트 | 설명 |
 |---|---|
 | `npm run dev` | 개발 서버 |
 | `npm run build` | 프로덕션 번들 |
-| `npm test` | API 클라이언트 단위 테스트 (node:test) |
+| `npm test` | API 클라이언트 · 채팅 소켓 단위 테스트 (node:test) |
 | `npm run test:e2e` | Playwright E2E. API는 모킹하므로 백엔드 없이 돈다 |
 
 ## 구조
@@ -35,12 +35,17 @@ src/
     productApi.js          카테고리 · 상품 목록/상세 · 찜 토글
     regionApi.js           동네 검색 · 근처 동네
     userApi.js             내 정보 · 내 찜 목록
+    chatApi.js             채팅방 · 메시지 · 읽음 · 나가기
+    chatSocket.js          채팅 실시간 연결(STOMP). 재연결 · 토큰 만료 처리
   components/
     Header.jsx             로고 · 동네 선택 · 검색 · 계정(PC)
     CategoryBar.jsx        카테고리 칩
     ProductCard.jsx        상품 카드 + 찜 버튼
     ProductDetail.jsx      상품 상세 모달 (이미지 슬라이드)
     MyPage.jsx             나의 골목 — 내 정보 + 찜한 상품
+    ChatPage.jsx           채팅 화면 — 목록·방 배치(PC 나란히, 모바일 한 화면씩)
+    ChatList.jsx           채팅 목록. 실시간으로 미리보기·안 읽은 수 갱신
+    ChatRoom.jsx           채팅방. 메시지 · 전송 · 읽음 표시 · 이전 메시지
     RegionPicker.jsx       동네 검색/선택 모달
     AuthModal.jsx          로그인 · 회원가입 모달
     Modal.jsx              공통 다이얼로그
@@ -56,6 +61,7 @@ src/
 - **찜은 낙관적 갱신을 하지 않는다.** 서버가 준 `{ isLiked, favoriteCount }`만 반영한다. 하트와 관심 수가 어긋난 채 남는 것보다 낫다고 봤다.
 - **상품 상세는 사용자 동작으로만 호출한다.** 상세 조회가 조회수를 올리기 때문에, StrictMode의 effect 재실행으로 두 번 세어지지 않게 했다.
 - **목록은 커서 페이징이다.** "더 보기"는 서버가 준 `nextCursor`를 그대로 돌려보낸다.
+- **채팅 메시지 전송은 REST, 수신은 WebSocket 이다.** 내가 보낸 메시지는 두 경로로 두 번 올 수 있어 `id`로 중복을 거른다. 재연결되면 REST 로 다시 불러온다(끊긴 동안의 이벤트는 다시 오지 않는다).
 
 ## 반응형
 
@@ -66,3 +72,4 @@ src/
 | 피드 | 1열 리스트 (썸네일 110px + 정보) | 3열 그리드 |
 | 카테고리 | 가로 스크롤 칩 | 헤더 하단 줄바꿈 배치 |
 | 내비게이션 | 하단 탭 | 헤더 우측 |
+| 채팅 | 목록 → 방 한 화면씩 | 목록 · 방 나란히 |

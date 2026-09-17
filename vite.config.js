@@ -9,7 +9,8 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      "/api": { target: "http://127.0.0.1:8080", changeOrigin: true }
+      // ws: 채팅 WebSocket(/api/ws)도 같은 백엔드로 넘긴다.
+      "/api": { target: "http://127.0.0.1:8080", changeOrigin: true, ws: true }
     }
   }
 });

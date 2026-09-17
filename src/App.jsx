@@ -9,7 +9,10 @@ import RegionPicker from "./components/RegionPicker.jsx";
 import ProductDetail from "./components/ProductDetail.jsx";
 import ProductForm from "./components/ProductForm.jsx";
 import MyPage from "./components/MyPage.jsx";
+import ChatPage from "./components/ChatPage.jsx";
 import { client } from "./api/client.js";
+import { chatSocket } from "./api/chatSocket.js";
+import { openChatRoom } from "./api/chatApi.js";
 import { logout } from "./api/authApi.js";
 import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavorite } from "./api/productApi.js";
 import styles from "./App.module.css";
@@ -37,6 +40,8 @@ export default function App() {
   const [feed, setFeed] = useState(emptyFeed);
   const [modal, setModal] = useState(null);
   const [view, setView] = useState("home");
+  const [chatRoomId, setChatRoomId] = useState(null);
+  const [chatEntry, setChatEntry] = useState(0);
   const [detail, setDetail] = useState(null);
   const [editor, setEditor] = useState(null);
   const [productRevision, setProductRevision] = useState(0);
@@ -71,6 +76,13 @@ export default function App() {
       });
     return () => { abort.abort(); moreController.current?.abort(); };
   }, [region?.id, categoryId, sort, keyword, retry, user?.id]);
+
+  // 로그인한 동안만 채팅 실시간 연결을 유지한다. 사용자가 바뀌면 이전 연결을 끊고 새 토큰으로 다시 연결한다.
+  useEffect(() => {
+    if (!user) return undefined;
+    chatSocket.start();
+    return () => chatSocket.stop();
+  }, [user?.id]);
 
   useEffect(() => {
     detailController.current?.abort(); setDetail(null); setEditor(null);
@@ -162,13 +174,29 @@ export default function App() {
     setEditor(null);
     detailController.current?.abort(); setDetail(null); setModal(null); setAccountError(""); setView("my");
   }
+  /** 채팅 화면으로. roomId 가 있으면 그 방을 연다. 같은 방을 다시 눌러도 화면을 새로 그리도록 진입 번호를 올린다. */
+  function chat(roomId = null) {
+    setEditor(null);
+    detailController.current?.abort(); setDetail(null); setModal(null); setAccountError("");
+    setChatRoomId(roomId); setChatEntry((value) => value + 1); setView("chat");
+  }
+
+  /**
+   * 상품 상세의 채팅하기. 서버가 기존 방이 있으면 그 방을 돌려주므로 여기서 중복을 판단하지 않는다.
+   * 실패 메시지는 상세 화면이 보여준다.
+   */
+  async function startChat(product) {
+    if (!user) { setAccountError(""); setModal("auth"); return; }
+    const room = await openChatRoom(product.id);
+    chat(room.roomId);
+  }
   async function signOut() {
     if (logoutPending.current) return;
     logoutPending.current = true; setLoggingOut(true); setAccountError("");
     try { await logout(); } catch (error) { setAccountError(error.message); }
     finally { logoutPending.current = false; setLoggingOut(false); }
   }
-  const navigation = { user, onHome: home, onRegionClick: () => setModal("region"), onMyPage: myPage, view,
+  const navigation = { user, onHome: home, onRegionClick: () => setModal("region"), onMyPage: myPage, onChat: () => chat(), view,
     onLogin: () => { setAccountError(""); setModal("auth"); }, onLogout: signOut, loggingOut };
   const categoryBar = <CategoryBar categories={categories} value={categoryId} onChange={setCategoryId} />;
 
@@ -188,7 +216,10 @@ export default function App() {
       {categoryBar}
     </Header>
     {view === "home" && <div className={styles.mobileOnly}>{categoryBar}</div>}
-    {view === "my"
+    {view === "chat"
+      ? <ChatPage key={`${user?.id ?? "guest"}-${chatEntry}`} user={user} initialRoomId={chatRoomId}
+          onOpenProduct={openProduct} onLogin={() => { setAccountError(""); setModal("auth"); }} />
+      : view === "my"
       ? <MyPage key={user?.id ?? "guest"} user={user} refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite} onRegionsChange={applyPrimaryRegion}
           onLogin={() => { setAccountError(""); setModal("auth"); }} />
       : <main className={styles.shell}>
@@ -215,12 +246,13 @@ export default function App() {
       <Sidebar onRegionClick={navigation.onRegionClick} />
     </main>}
     <BottomNav {...navigation} />
-    <button className={styles.writeButton} onClick={writeProduct}>＋ 상품 등록</button>
+    {/* 채팅 화면에서는 떠 있는 등록 버튼이 입력창의 전송 버튼을 가린다. */}
+    {view !== "chat" && <button className={styles.writeButton} onClick={writeProduct}>＋ 상품 등록</button>}
     <footer className={styles.footer + " " + styles.pcOnly}><div className={styles.footerInner}><span>골목마켓 · 동네 기반 중고거래 플랫폼</span><span>이웃의 물건에 새로운 일상을</span></div></footer>
     {modal === "auth" && <AuthModal onClose={() => setModal(null)} />}
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
     {detail && <ProductDetail key={detail.id} detail={detail} onClose={() => { detailController.current?.abort(); setDetail(null); }} onRetry={() => openProduct(detail.id)}
-      onEdit={(product) => { setDetail(null); setEditor({ product }); }} onChanged={productChanged}
+      onEdit={(product) => { setDetail(null); setEditor({ product }); }} onChanged={productChanged} onStartChat={startChat}
       onDeleted={() => { setDetail(null); setProductRevision((v) => v + 1); setRetry((v) => v + 1); }} />}
     {editor && <ProductForm key={editor.product?.id ?? "new"} product={editor.product} categories={categories}
       onClose={() => setEditor(null)} onVerifyRegion={myPage} onSaved={(product) => { setEditor(null); productChanged(product); }} />}

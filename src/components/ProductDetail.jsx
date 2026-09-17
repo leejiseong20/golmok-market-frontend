@@ -4,7 +4,7 @@ import { formatDate, formatPrice, statusLabel } from "../data/format.js";
 import Modal from "./Modal.jsx";
 import styles from "./Modal.module.css";
 
-export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChanged, onDeleted }) {
+export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChanged, onDeleted, onStartChat }) {
   const [index, setIndex] = useState(0);
   const [failedImage, setFailedImage] = useState(null);
   const [pending, setPending] = useState(false);
@@ -29,6 +29,14 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
         if (alive.current) { onChanged(product); setNotice("상품을 끌어올렸어요."); }
       }
     } catch (e) { if (alive.current) setError(e.message); }
+    finally { busy.current = false; if (alive.current) setPending(false); }
+  }
+  // 성공하면 App 이 채팅 화면으로 옮기며 이 모달을 닫는다. 실패하면 서버 메시지를 여기서 보여준다.
+  async function startChat() {
+    if (busy.current) return;
+    busy.current = true; setPending(true); setError("");
+    try { await onStartChat(product); }
+    catch (e) { if (alive.current) setError(e.message); }
     finally { busy.current = false; if (alive.current) setPending(false); }
   }
   return <Modal title="상품 상세" busy={pending} onClose={() => { if (!busy.current) onClose(); }}>
@@ -56,6 +64,12 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
         {product.isLiked ? " · 관심 등록한 상품" : ""}</p>
       <p className={styles.note}>등록 {formatDate(product.createdAt)}</p>
       <div className={styles.seller}><strong>{product.seller.nickname}</strong><span>매너온도 {Number(product.seller.mannerTemp).toFixed(1)}°C</span></div>
+      {!product.isMine && <section aria-label="판매자와 대화">
+        {error && <p className={styles.error} role="alert">{error}</p>}
+        <div className={styles.actions}>
+          <button className={styles.primary} disabled={pending} onClick={startChat}>{pending ? "채팅방 여는 중…" : "채팅하기"}</button>
+        </div>
+      </section>}
       {product.isMine && <section aria-label="내 상품 관리">
         {error && <p className={styles.error} role="alert">{error}</p>}
         {notice && <p className={styles.success} role="status">{notice}</p>}
