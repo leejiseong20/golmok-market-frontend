@@ -14,6 +14,7 @@ import ChatPage from "./components/ChatPage.jsx";
 import UserProfile from "./components/UserProfile.jsx";
 import NotificationPanel from "./components/NotificationPanel.jsx";
 import NotFound from "./components/NotFound.jsx";
+import PopularKeywords from "./components/PopularKeywords.jsx";
 import { client } from "./api/client.js";
 import { chatSocket } from "./api/chatSocket.js";
 import { openChatRoom } from "./api/chatApi.js";
@@ -373,7 +374,7 @@ export default function App() {
         onOpen={() => openProduct(product.id)} onToggleFavorite={toggleFavorite} />)}</div>
       {feed.hasNext && <button className={styles.more} onClick={more} disabled={feed.loadingMore}>{feed.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
     </section>
-    <Sidebar onRegionClick={navigation.onRegionClick} />
+    <Sidebar onRegionClick={navigation.onRegionClick} onKeyword={(value) => changeHomeQuery({ keyword: value })} />
   </main>;
   const chatScreen = <ChatScreen user={user} onHome={goHome} onLogin={login} onSelectRoom={selectRoom}
     onOpenProduct={openProduct} onOpenProfile={openProfile} />;
@@ -386,7 +387,9 @@ export default function App() {
       unreadCount={unreadCount} onNotifications={() => { setAccountError(""); setModal("notifications"); }}>
       {categoryBar}
     </Header>
-    {view === "home" && <div className={styles.mobileOnly}>{categoryBar}</div>}
+    {view === "home" && <div className={styles.mobileOnly}>{categoryBar}
+      {/* 검색 중에는 결과에 집중하도록 인기 검색어를 숨긴다. */}
+      {!keyword && <PopularKeywords variant="chips" onSelect={(value) => changeHomeQuery({ keyword: value })} />}</div>}
     <Routes location={pageLocation}>
       <Route path="/" element={homePage} />
       {/* 상세·프로필 주소로 바로 들어오면 홈 위에 모달을 띄운다. */}
