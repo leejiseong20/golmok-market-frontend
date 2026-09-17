@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { bumpProduct, changeProductStatus, deleteProduct } from "../api/productApi.js";
 import { formatDate, formatPrice, statusLabel } from "../data/format.js";
+import Avatar from "./Avatar.jsx";
 import Modal from "./Modal.jsx";
 import styles from "./Modal.module.css";
 
@@ -63,7 +64,13 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
       <p className={styles.note}>조회 {product.viewCount} · 관심 {product.favoriteCount} · 채팅 {product.chatCount}
         {product.isLiked ? " · 관심 등록한 상품" : ""}</p>
       <p className={styles.note}>등록 {formatDate(product.createdAt)}</p>
-      <div className={styles.seller}><button onClick={() => onOpenProfile(product.seller.id)} aria-label="판매자 프로필 보기"><strong>{product.seller.nickname}</strong></button><span>매너온도 {Number(product.seller.mannerTemp).toFixed(1)}°C</span></div>
+      <div className={styles.seller}>
+        <Avatar url={product.seller.profileImageUrl} name={product.seller.nickname} size={44} />
+        <div className={styles.sellerInfo}>
+          <button onClick={() => onOpenProfile(product.seller.id)} aria-label="판매자 프로필 보기"><strong>{product.seller.nickname}</strong></button>
+          <span>매너온도 {Number(product.seller.mannerTemp).toFixed(1)}°C</span>
+        </div>
+      </div>
       {!product.isMine && <section aria-label="판매자와 대화">
         {error && <p className={styles.error} role="alert">{error}</p>}
         <div className={styles.actions}>

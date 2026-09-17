@@ -169,3 +169,22 @@ test("손상되거나 차단된 저장소에서도 공개 요청을 보낼 수 �
   } });
   assert.deepEqual(await client.request("/categories"), []);
 });
+
+test("프로필 수정 뒤 저장된 사용자 정보를 바꾸고, 다른 계정의 늦은 갱신은 무시한다", () => {
+  const saved = storage();
+  const client = createApiClient({ storage: saved, fetchImpl: async () => Response.json({}) });
+  let notified = 0;
+  client.subscribe(() => notified++);
+
+  client.updateUser(1, { nickname: "새이름" });
+  assert.equal(client.getSession().user.nickname, "새이름");
+  assert.equal(client.getSession().accessToken, "old-access");
+  assert.equal(JSON.parse(saved.getItem()).user.nickname, "새이름");
+  assert.equal(notified, 1);
+
+  client.updateUser(999, { nickname: "남의이름" });
+  assert.equal(client.getSession().user.nickname, "새이름");
+  client.clearSession();
+  client.updateUser(1, { nickname: "로그아웃뒤" });
+  assert.equal(client.getSession(), null);
+});

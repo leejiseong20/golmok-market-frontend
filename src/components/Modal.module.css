@@ -26,7 +26,8 @@
 .productTitle { font-size: 24px; margin: 18px 0 8px; overflow-wrap: anywhere; }
 .price { font-size: 26px; font-weight: 700; margin: 12px 0; }
 .description { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; margin: 20px 0; }
-.seller { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; display: grid; gap: 6px; }
+.seller { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; display: flex; align-items: center; gap: 12px; }
+.sellerInfo { display: grid; gap: 4px; min-width: 0; }
 .seller button { justify-self: start; padding: 0; border: 0; background: none; color: var(--ink); font-size: inherit; }
 .seller button:hover { color: var(--accent); }
 .tag { display: inline-block; padding: 5px 10px; border-radius: 8px; background: var(--surface-2); font-size: 13px; margin-right: 8px; }

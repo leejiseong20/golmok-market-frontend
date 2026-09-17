@@ -17,19 +17,6 @@
   background: var(--panel, #fff);
 }
 
-.avatar {
-  width: 52px;
-  height: 52px;
-  flex: none;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  font-size: 20px;
-  font-weight: 700;
-  color: #fff;
-  background: var(--accent);
-}
-
 .title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
 .sub { margin-top: 6px; color: var(--ink-4); font-size: 14px; }
 .temp { margin-top: 4px; font-size: 14px; color: var(--ink-4); }
@@ -127,3 +114,16 @@
 .purchases { display: flex; flex-direction: column; }
 .filter { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
 .filter select { padding: 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); }
+
+.profileBody { flex: 1; min-width: 0; }
+.editProfile {
+  flex: none;
+  align-self: center;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}

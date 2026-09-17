@@ -1,6 +1,7 @@
 .list { display: grid; gap: 12px; }
 .card { border: 1px solid var(--line); border-radius: 14px; padding: 18px; background: #fff; }
-.card header { display: flex; justify-content: space-between; gap: 12px; }
+.card header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.reviewer { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .card header span { color: var(--accent); white-space: nowrap; }
 .card p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
 .card time { display: block; color: var(--ink-4); font-size: 12px; margin-top: 12px; }

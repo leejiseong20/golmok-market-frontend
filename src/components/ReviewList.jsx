@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchReviews } from "../api/reviewApi.js";
 import { formatDate } from "../data/format.js";
+import Avatar from "./Avatar.jsx";
 import styles from "./ReviewList.module.css";
 
 const empty = { items: [], cursor: null, hasNext: false, loading: true, error: "" };
@@ -46,7 +47,13 @@ export default function ReviewList({ userId }) {
     {!state.loading && !state.error && !state.items.length && <p>아직 받은 후기가 없어요.</p>}
     {state.error && <p role="alert">{state.error} <button onClick={() => state.items.length ? more() : setRetry((n) => n + 1)}>다시 시도</button></p>}
     {state.items.map((review) => <article className={styles.card} key={review.id}>
-      <header><strong>{review.reviewer.nickname}</strong><span>{review.score}점 / 5점</span></header>
+      <header>
+        <span className={styles.reviewer}>
+          <Avatar url={review.reviewer.profileImageUrl} name={review.reviewer.nickname} size={32} />
+          <strong>{review.reviewer.nickname}</strong>
+        </span>
+        <span>{review.score}점 / 5점</span>
+      </header>
       {review.content && <p>{review.content}</p>}
       <time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time>
     </article>)}

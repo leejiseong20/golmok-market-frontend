@@ -16,3 +16,7 @@ export const deleteMyRegion = (regionId) =>
   client.request(`/users/me/regions/${encodeURIComponent(regionId)}`, { method: "DELETE" });
 export const markPrimaryRegion = (regionId) =>
   client.request(`/users/me/regions/${encodeURIComponent(regionId)}/primary`, { method: "PATCH" });
+
+/** 닉네임과 사진을 항상 함께 보낸다. profileImageUrl 이 null 이면 사진을 지운다. 응답은 갱신된 내 정보다. */
+export const updateMyProfile = ({ nickname, profileImageUrl }) =>
+  client.request("/users/me", { method: "PATCH", body: { nickname, profileImageUrl } });

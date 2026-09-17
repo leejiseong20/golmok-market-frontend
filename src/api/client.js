@@ -112,6 +112,14 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
     clearSession,
     // 채팅 소켓이 EXPIRED_TOKEN 으로 거부될 때 쓴다. 따로 재발급하면 동시 재발급으로 한쪽 토큰이 폐기되므로 같은 비행을 공유한다.
     refreshTokens: refresh,
+    /**
+     * 저장된 로그인 사용자 정보(헤더 닉네임 등)를 바꾼다. 프로필 수정 성공 후에 쓴다.
+     * 그 사이 로그아웃했거나 다른 계정으로 바뀌었으면 무시한다(늦게 끝난 요청이 새 세션을 덮지 않게).
+     */
+    updateUser(userId, changes) {
+      if (!session || session.user.id !== userId) return;
+      publish({ ...session, user: { ...session.user, ...changes } });
+    },
     async login(credentials) {
       const started = generation;
       const result = await send("/auth/login", { method: "POST", body: credentials });

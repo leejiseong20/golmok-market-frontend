@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchChatRooms } from "../api/chatApi.js";
 import { chatSocket } from "../api/chatSocket.js";
+import Avatar from "./Avatar.jsx";
 import { relativeTime, statusLabel } from "../data/format.js";
 import styles from "./ChatList.module.css";
 
@@ -106,7 +107,10 @@ export default function ChatList({ me, selectedId, onSelect }) {
           </span>
           <span className={styles.body}>
             <span className={styles.top}>
-              <strong className={styles.nickname}>{room.opponent.nickname}</strong>
+              <span className={styles.who}>
+                <Avatar url={room.opponent.profileImageUrl} name={room.opponent.nickname} size={20} />
+                <strong className={styles.nickname}>{room.opponent.nickname}</strong>
+              </span>
               <span className={styles.time}>{relativeTime(room.lastMessageAt)}</span>
             </span>
             <span className={styles.product}>

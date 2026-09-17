@@ -52,3 +52,4 @@
   font-weight: 600;
   color: var(--ink-2);
 }
+.who { display: flex; align-items: center; gap: 6px; min-width: 0; }

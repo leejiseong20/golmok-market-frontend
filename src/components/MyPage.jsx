@@ -4,6 +4,9 @@ import PurchaseCard from "./PurchaseCard.jsx";
 import MyRegions from "./MyRegions.jsx";
 import ReviewForm from "./ReviewForm.jsx";
 import ReviewList from "./ReviewList.jsx";
+import Avatar from "./Avatar.jsx";
+import ProfileForm from "./ProfileForm.jsx";
+import { client } from "../api/client.js";
 import { fetchMe, fetchMyFavorites } from "../api/userApi.js";
 import { confirmPurchase, fetchMyPurchases } from "../api/tradeApi.js";
 import { fetchMyProducts } from "../api/productApi.js";
@@ -34,6 +37,7 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
   const [actionError, setActionError] = useState("");
   const [saleStatus, setSaleStatus] = useState("");
   const [review, setReview] = useState(null);
+  const [editingProfile, setEditingProfile] = useState(false);
   const moreController = useRef(null);
   const morePending = useRef(false);
   const list = loaded.tab === tab ? loaded : { ...emptyList, tab };
@@ -125,14 +129,15 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
 
   return <main className={styles.shell}>
     <section aria-label="내 정보" className={styles.profile}>
-      <div className={styles.avatar} aria-hidden="true">{(profile?.nickname ?? user.nickname).slice(0, 1)}</div>
-      <div>
+      <Avatar url={profile?.profileImageUrl} name={profile?.nickname ?? user.nickname} size={52} />
+      <div className={styles.profileBody}>
         <h1 className={styles.title}>{profile?.nickname ?? user.nickname}</h1>
         {profileError
           ? <p className={styles.error} role="alert">{profileError}
               <button onClick={() => setRetry((value) => value + 1)}>다시 시도</button></p>
           : <p className={styles.temp}>매너온도 <strong>{profile ? `${profile.mannerTemp}℃` : "…"}</strong></p>}
       </div>
+      {profile && <button className={styles.editProfile} onClick={() => setEditingProfile(true)}>프로필 수정</button>}
     </section>
 
     {profile && <MyRegions regions={profile.regions} onChange={(regions) => {
@@ -172,6 +177,12 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
       {list.hasNext && <button className={styles.more} onClick={more} disabled={list.loadingMore}>
         {list.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
     </section>}
+    {editingProfile && profile && <ProfileForm profile={profile} onClose={() => setEditingProfile(false)}
+      onSaved={(updated) => {
+        // 응답이 갱신된 내 정보라 다시 조회하지 않는다. 헤더 닉네임은 저장된 세션에서 읽으므로 세션도 바꾼다.
+        setProfile(updated); setEditingProfile(false);
+        client.updateUser(user.id, { nickname: updated.nickname });
+      }} />}
     {review && <ReviewForm tradeId={review.tradeId} nickname={review.seller.nickname}
       onClose={() => setReview(null)} onSaved={() => { setReview(null); setRetry((n) => n + 1); }} />}
   </main>;

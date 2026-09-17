@@ -3,6 +3,7 @@ import {
   cancelReservation, completeTrade, fetchChatRoom, fetchMessages, leaveChatRoom, markChatRead, reserveTrade, sendMessage,
 } from "../api/chatApi.js";
 import { chatSocket } from "../api/chatSocket.js";
+import Avatar from "./Avatar.jsx";
 import ReviewForm from "./ReviewForm.jsx";
 import { formatChatDay, formatChatTime, formatPrice, statusLabel, tradeStatusLabel } from "../data/format.js";
 import styles from "./ChatRoom.module.css";
@@ -226,6 +227,7 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
   return <div className={styles.room}>
     <header className={styles.header}>
       <button className={styles.back} onClick={onBack} aria-label="채팅 목록으로">←</button>
+      {room && <Avatar url={room.opponent.profileImageUrl} name={room.opponent.nickname} size={40} />}
       <div className={styles.who}>
         <button onClick={() => onOpenProfile(room.opponent.id)} disabled={!room} aria-label="상대 프로필 보기">
           <strong>{room?.opponent.nickname ?? "…"}</strong></button>
