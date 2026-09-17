@@ -20,3 +20,6 @@ export const markPrimaryRegion = (regionId) =>
 /** 닉네임과 사진을 항상 함께 보낸다. profileImageUrl 이 null 이면 사진을 지운다. 응답은 갱신된 내 정보다. */
 export const updateMyProfile = ({ nickname, profileImageUrl }) =>
   client.request("/users/me", { method: "PATCH", body: { nickname, profileImageUrl } });
+
+/** 회원 탈퇴. 비밀번호를 다시 받는다. 성공(204)하면 화면이 세션을 지운다. */
+export const withdrawMe = (password) => client.request("/users/me", { method: "DELETE", body: { password } });

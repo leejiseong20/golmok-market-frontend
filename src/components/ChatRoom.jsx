@@ -224,12 +224,15 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
     </div>;
   }
 
+  // 탈퇴한 상대에게는 보낼 수 없고(서버도 거부한다) 프로필도 없다. 대화 기록은 그대로 보여준다.
+  const withdrawn = !!room?.opponent.withdrawn;
+
   return <div className={styles.room}>
     <header className={styles.header}>
       <button className={styles.back} onClick={onBack} aria-label="채팅 목록으로">←</button>
       {room && <Avatar url={room.opponent.profileImageUrl} name={room.opponent.nickname} size={40} />}
       <div className={styles.who}>
-        <button onClick={() => onOpenProfile(room.opponent.id)} disabled={!room} aria-label="상대 프로필 보기">
+        <button onClick={() => onOpenProfile(room.opponent.id)} disabled={!room || withdrawn} aria-label="상대 프로필 보기">
           <strong>{room?.opponent.nickname ?? "…"}</strong></button>
         {room && <span>매너온도 {Number(room.opponent.mannerTemp).toFixed(1)}°C</span>}
       </div>
@@ -293,15 +296,18 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
           </div>
         </div>;
       })}
-      {room?.opponentLeft && <p className={styles.notice}>상대방이 채팅방을 나갔어요. 메시지를 보내면 상대에게 다시 보여요.</p>}
+      {withdrawn
+        ? <p className={styles.notice}>탈퇴한 사용자예요. 대화 기록은 볼 수 있지만 메시지를 보내거나 거래할 수 없어요.</p>
+        : room?.opponentLeft && <p className={styles.notice}>상대방이 채팅방을 나갔어요. 메시지를 보내면 상대에게 다시 보여요.</p>}
     </div>
 
     <form className={styles.composer} onSubmit={submit}>
       {sendError && <p className={styles.sendError} role="alert">{sendError}</p>}
       <div className={styles.inputRow}>
-        <textarea aria-label="메시지 입력" placeholder="메시지를 입력하세요" rows={1} maxLength={MAX_LENGTH}
-          value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} disabled={!room} />
-        <button type="submit" className={styles.send} disabled={sending || !draft.trim() || !room}>
+        <textarea aria-label="메시지 입력" placeholder={withdrawn ? "탈퇴한 사용자에게는 보낼 수 없어요" : "메시지를 입력하세요"}
+          rows={1} maxLength={MAX_LENGTH}
+          value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} disabled={!room || withdrawn} />
+        <button type="submit" className={styles.send} disabled={sending || !draft.trim() || !room || withdrawn}>
           {sending ? "전송 중" : "전송"}</button>
       </div>
       {draft.length > MAX_LENGTH - 100 && <p className={styles.count}>{draft.length} / {MAX_LENGTH}</p>}

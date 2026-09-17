@@ -102,3 +102,20 @@
     padding: 12px 24px;
   }
 }
+
+/* 채팅 안 읽은 메시지 뱃지. 알림 종 뱃지와 같은 모양이다. */
+.account .chat { position: relative; }
+.count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}

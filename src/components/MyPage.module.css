@@ -127,3 +127,7 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+.withdraw { margin-top: 40px; text-align: right; }
+.withdraw button { padding: 6px 2px; border: none; background: none; color: var(--ink-4); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.withdraw button:hover { color: #a12c1e; }

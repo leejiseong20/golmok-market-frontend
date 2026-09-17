@@ -32,3 +32,6 @@ export const reserveTrade = (roomId) => client.request(`${room(roomId)}/reservat
 export const cancelReservation = (roomId) => client.request(`${room(roomId)}/reservation`, { method: "DELETE" });
 
 export const completeTrade = (roomId) => client.request(`${room(roomId)}/completion`, { method: "POST" });
+
+/** 헤더·하단 탭 뱃지. 내가 나가지 않은 방에서 상대가 보낸 안 읽은 메시지 합계. */
+export const fetchChatUnreadCount = (signal) => client.request("/chat-rooms/unread-count", { signal });

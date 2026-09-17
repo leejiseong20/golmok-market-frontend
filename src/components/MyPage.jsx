@@ -6,6 +6,7 @@ import ReviewForm from "./ReviewForm.jsx";
 import ReviewList from "./ReviewList.jsx";
 import Avatar from "./Avatar.jsx";
 import ProfileForm from "./ProfileForm.jsx";
+import WithdrawForm from "./WithdrawForm.jsx";
 import { client } from "../api/client.js";
 import { fetchMe, fetchMyFavorites } from "../api/userApi.js";
 import { confirmPurchase, fetchMyPurchases } from "../api/tradeApi.js";
@@ -29,7 +30,7 @@ const emptyList = { tab: null, items: [], cursor: null, hasNext: false, loading:
  * 목록에 어느 탭의 데이터인지(list.tab)를 함께 둔다. 뒤로가기로 탭이 바뀌면 effect 가 새 데이터를 받기 전에
  * 한 번 렌더링되는데, 이때 이전 탭 항목을 새 탭의 카드로 그리면 형태가 달라 터진다. 탭이 다르면 비어 있는 것으로 본다.
  */
-export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggleFavorite, onLogin, onRegionsChange, refreshKey = 0 }) {
+export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggleFavorite, onLogin, onHome, onRegionsChange, refreshKey = 0 }) {
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
   const [loaded, setList] = useState(emptyList);
@@ -38,6 +39,7 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
   const [saleStatus, setSaleStatus] = useState("");
   const [review, setReview] = useState(null);
   const [editingProfile, setEditingProfile] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
   const moreController = useRef(null);
   const morePending = useRef(false);
   const list = loaded.tab === tab ? loaded : { ...emptyList, tab };
@@ -177,6 +179,13 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
       {list.hasNext && <button className={styles.more} onClick={more} disabled={list.loadingMore}>
         {list.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
     </section>}
+    {/* 자주 누를 일이 없고 실수로 누르면 안 되는 동작이라 페이지 맨 아래에 작게 둔다. */}
+    {profile && <p className={styles.withdraw}><button onClick={() => setWithdrawing(true)}>회원 탈퇴</button></p>}
+    {withdrawing && <WithdrawForm onClose={() => setWithdrawing(false)} onWithdrawn={() => {
+      // 서버가 refresh token 을 모두 지웠으므로 이 기기의 세션만 지우면 된다. 홈으로 먼저 옮겨 빈 마이페이지를 거치지 않는다.
+      onHome();
+      client.clearSession();
+    }} />}
     {editingProfile && profile && <ProfileForm profile={profile} onClose={() => setEditingProfile(false)}
       onSaved={(updated) => {
         // 응답이 갱신된 내 정보라 다시 조회하지 않는다. 헤더 닉네임은 저장된 세션에서 읽으므로 세션도 바꾼다.

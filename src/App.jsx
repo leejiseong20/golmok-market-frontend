@@ -17,7 +17,7 @@ import NotFound from "./components/NotFound.jsx";
 import PopularKeywords from "./components/PopularKeywords.jsx";
 import { client } from "./api/client.js";
 import { chatSocket } from "./api/chatSocket.js";
-import { openChatRoom } from "./api/chatApi.js";
+import { fetchChatUnreadCount, openChatRoom } from "./api/chatApi.js";
 import { fetchUnreadCount } from "./api/notificationApi.js";
 import { logout } from "./api/authApi.js";
 import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavorite } from "./api/productApi.js";
@@ -86,6 +86,7 @@ export default function App() {
   const [feed, setFeed] = useState(emptyFeed);
   const [modal, setModal] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [detail, setDetail] = useState(null);
   const [detailRetry, setDetailRetry] = useState(0);
   const [editor, setEditor] = useState(null);
@@ -100,6 +101,8 @@ export default function App() {
   const lastUserId = useRef(null);
   // 상세를 받아 둔 사용자. 처음 값을 현재 사용자로 둬야 새로고침 직후(세션 복원)를 "사용자 변경"으로 오인해 상세를 두 번 받지 않는다.
   const detailUserId = useRef(user?.id ?? null);
+  const reloadChatUnread = useRef(() => {});
+  const chatUnreadPath = useRef(location.pathname);
 
   useEffect(() => {
     const abort = new AbortController();
@@ -186,6 +189,45 @@ export default function App() {
     });
     return () => { abort.abort(); offConnected(); offEvent(); };
   }, [user?.id]);
+
+  /**
+   * 채팅 뱃지(안 읽은 메시지 합계). 알림 뱃지와 달리 +1 로 세지 않고 서버에 다시 묻는다.
+   * 보고 있는 방의 메시지는 곧바로 읽음 처리되고, 방에 들어가 읽으면 여러 개가 한 번에 줄어서
+   * 화면에서 더하고 빼면 어긋나기 쉽다. 대신 이벤트가 몰려도 요청은 300ms 에 한 번만 보낸다.
+   * 다시 묻는 때: 로그인, 소켓 (재)연결, 상대의 새 메시지, 내가 읽음, 페이지 이동(나가기는 이벤트 없이 읽음 처리된다).
+   */
+  useEffect(() => {
+    setChatUnreadCount(0);
+    if (!user) return undefined;
+    const me = user.id;
+    let abort = new AbortController();
+    let timer = null;
+    const load = () => {
+      clearTimeout(timer); timer = null;
+      abort.abort(); abort = new AbortController();
+      const signal = abort.signal;
+      fetchChatUnreadCount(signal).then((data) => { if (!signal.aborted) setChatUnreadCount(data.count); })
+        .catch(() => { /* 뱃지는 부가 정보다. 다음 이벤트·이동 때 다시 맞춘다. */ });
+    };
+    const schedule = () => { clearTimeout(timer); timer = setTimeout(load, 300); };
+    reloadChatUnread.current = schedule;
+    load();
+    const offConnected = chatSocket.onConnected(load);
+    const offEvent = chatSocket.onEvent((event) => {
+      if ((event.type === "MESSAGE" && event.message.senderId !== me) || (event.type === "READ" && event.readerId === me)) schedule();
+    });
+    return () => {
+      clearTimeout(timer); abort.abort(); offConnected(); offEvent();
+      reloadChatUnread.current = () => {};
+    };
+  }, [user?.id]);
+
+  // 처음 렌더링은 위 effect 가 이미 불러오므로 건너뛴다.
+  useEffect(() => {
+    if (chatUnreadPath.current === location.pathname) return;
+    chatUnreadPath.current = location.pathname;
+    reloadChatUnread.current();
+  }, [location.pathname]);
 
   // 사용자가 바뀌면(로그인·로그아웃) 이전 사용자 기준의 상세(isLiked·isMine)를 다시 받아야 한다.
   useEffect(() => {
@@ -329,7 +371,7 @@ export default function App() {
   }
   const login = () => { setAccountError(""); setModal("auth"); };
   const goHome = () => go(paths.home);
-  const navigation = { user, view, loggingOut, onLogin: login, onLogout: signOut,
+  const navigation = { user, view, loggingOut, chatUnreadCount, onLogin: login, onLogout: signOut,
     onHome: goHome, onMyPage: () => go(paths.my()), onChat: () => go(paths.chat),
     onRegionClick: () => setModal("region") };
   const categoryBar = <CategoryBar categories={categories} value={categoryId} onChange={(value) => changeHomeQuery({ categoryId: value })} />;

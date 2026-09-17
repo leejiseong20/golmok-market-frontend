@@ -1,0 +1,14 @@
+.form { display: grid; gap: 16px; color: var(--ink); }
+.lead { font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+.list { display: grid; gap: 6px; margin: 0; padding: 12px 14px 12px 30px; border-radius: 10px; background: var(--surface-2); font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.field { display: grid; gap: 7px; font-size: 14px; font-weight: 600; }
+.field input { width: 100%; min-width: 0; border: 1px solid var(--line-strong); border-radius: 10px; background: white; padding: 12px; font: inherit; color: var(--ink); }
+.field input[aria-invalid="true"] { border-color: #a12c1e; }
+.fieldError { font-size: 13px; font-weight: 400; color: #a12c1e; }
+.agree { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.agree input { margin-top: 3px; accent-color: #a12c1e; }
+.error { color: #a12c1e; background: #fff0eb; border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.6; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.secondary { padding: 13px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--ink-2); font: inherit; font-weight: 600; }
+.danger { padding: 13px; border: none; border-radius: 10px; background: #a12c1e; color: white; font: inherit; font-weight: 700; }
+.danger:disabled { opacity: 0.45; cursor: default; }
