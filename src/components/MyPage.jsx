@@ -15,26 +15,28 @@ const TABS = [
   { id: "sales", label: "판매내역" },
   { id: "reviews", label: "받은 후기" },
 ];
-const emptyList = { items: [], cursor: null, hasNext: false, loading: true, loadingMore: false, error: "" };
+const emptyList = { tab: null, items: [], cursor: null, hasNext: false, loading: true, loadingMore: false, error: "" };
 
 /**
- * 마이페이지: 내 정보 + 찜한 상품 / 구매내역.
+ * 마이페이지: 내 정보 + 찜한 상품 / 구매내역 / 판매내역 / 받은 후기.
  *
+ * 탭은 주소(/my, /my/purchases …)가 정한다. 새로고침·뒤로가기·알림 링크가 같은 탭을 연다.
  * 탭을 바꿀 때마다 서버에서 다시 받는다. 다른 기기에서 찜하거나 거래 상태가 바뀐 것까지 반영된다.
- * 판매내역은 상품 카드와 생성 시각 커서를 사용한다. 탭 변경 시 이전 목록을 즉시 비운다.
+ *
+ * 목록에 어느 탭의 데이터인지(list.tab)를 함께 둔다. 뒤로가기로 탭이 바뀌면 effect 가 새 데이터를 받기 전에
+ * 한 번 렌더링되는데, 이때 이전 탭 항목을 새 탭의 카드로 그리면 형태가 달라 터진다. 탭이 다르면 비어 있는 것으로 본다.
  */
-export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin, onRegionsChange, refreshKey = 0, initialTab = "favorites" }) {
-  // 알림("새 후기를 받았어요")에서 들어오면 받은 후기 탭으로 바로 연다.
-  const [tab, setTab] = useState(TABS.some((item) => item.id === initialTab) ? initialTab : "favorites");
+export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggleFavorite, onLogin, onRegionsChange, refreshKey = 0 }) {
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
-  const [list, setList] = useState(emptyList);
+  const [loaded, setList] = useState(emptyList);
   const [retry, setRetry] = useState(0);
   const [actionError, setActionError] = useState("");
   const [saleStatus, setSaleStatus] = useState("");
   const [review, setReview] = useState(null);
   const moreController = useRef(null);
   const morePending = useRef(false);
+  const list = loaded.tab === tab ? loaded : { ...emptyList, tab };
 
   const load = useCallback((options) => {
     if (tab === "favorites") return fetchMyFavorites(options);
@@ -60,14 +62,14 @@ export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin,
     morePending.current = false;
     if (tab === "reviews") return () => abort.abort();
     setActionError("");
-    setList({ ...emptyList, loading: true });
+    setList({ ...emptyList, tab, loading: true });
     load({ signal: abort.signal })
       .then((page) => {
         if (!abort.signal.aborted) {
-          setList({ ...emptyList, loading: false, items: page.content, cursor: page.nextCursor, hasNext: page.hasNext });
+          setList({ ...emptyList, tab, loading: false, items: page.content, cursor: page.nextCursor, hasNext: page.hasNext });
         }
       })
-      .catch((error) => { if (!abort.signal.aborted) setList({ ...emptyList, loading: false, error: error.message }); });
+      .catch((error) => { if (!abort.signal.aborted) setList({ ...emptyList, tab, loading: false, error: error.message }); });
     return () => { abort.abort(); moreController.current?.abort(); };
   }, [user?.id, retry, load, refreshKey]);
 
@@ -141,14 +143,12 @@ export default function MyPage({ user, onOpenProduct, onToggleFavorite, onLogin,
     <div className={styles.tabs} role="tablist" aria-label="마이페이지 메뉴">
       {TABS.map(({ id, label }) => <button key={id} role="tab" aria-selected={tab === id}
         className={styles.tab + (tab === id ? " " + styles.tabOn : "")}
-        // 목록도 같이 비운다. 비우지 않으면 effect 가 새 데이터를 받기 전에
-        // 이전 탭의 항목이 새 탭의 카드로 한 번 렌더링돼 형태가 달라 터진다.
-        onClick={() => { setTab(id); setList({ ...emptyList, loading: true }); }}>{label}</button>)}
+        onClick={() => { if (id !== tab) onTabChange(id); }}>{label}</button>)}
     </div>
 
     {tab === "reviews" ? <ReviewList key={`${user.id}-${retry}`} userId={user.id} /> : <section aria-label={TABS.find((item) => item.id === tab).label}>
       {tab === "sales" && <label className={styles.filter}>판매 상태 <select aria-label="판매 상태" value={saleStatus} onChange={(e) => {
-        moreController.current?.abort(); setSaleStatus(e.target.value); setList({ ...emptyList, loading: true });
+        moreController.current?.abort(); setSaleStatus(e.target.value); setList({ ...emptyList, tab, loading: true });
       }}><option value="">전체</option><option value="ON_SALE">판매중</option><option value="RESERVED">예약중</option><option value="SOLD">판매완료</option></select></label>}
       {actionError && <div className={styles.error} role="alert">{actionError}</div>}
       {list.loading && <p className={styles.empty} role="status">불러오고 있어요…</p>}
