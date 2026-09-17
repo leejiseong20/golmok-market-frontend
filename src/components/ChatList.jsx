@@ -42,7 +42,8 @@ export default function ChatList({ me, selectedId, onSelect }) {
   useEffect(() => {
     const offEvent = chatSocket.onEvent((event) => {
       if (event.type === "MESSAGE") {
-        if (!itemsRef.current.some((room) => room.roomId === event.roomId)) {
+        // 거래 변경(시스템 메시지)은 상품 상태 표시도 바뀌므로 목록을 새로 받는다.
+        if (event.message.type === "SYSTEM" || !itemsRef.current.some((room) => room.roomId === event.roomId)) {
           setReload((value) => value + 1);
           return;
         }

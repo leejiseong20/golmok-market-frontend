@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { fetchChatRoom, fetchMessages, leaveChatRoom, markChatRead, sendMessage } from "../api/chatApi.js";
+import {
+  cancelReservation, completeTrade, fetchChatRoom, fetchMessages, leaveChatRoom, markChatRead, reserveTrade, sendMessage,
+} from "../api/chatApi.js";
 import { chatSocket } from "../api/chatSocket.js";
-import { formatChatDay, formatChatTime, formatPrice, statusLabel } from "../data/format.js";
+import { formatChatDay, formatChatTime, formatPrice, statusLabel, tradeStatusLabel } from "../data/format.js";
 import styles from "./ChatRoom.module.css";
 
 const MAX_LENGTH = 1000;
@@ -22,6 +24,9 @@ const dayOf = (value) => value?.slice(0, 10);
  * 읽음 처리는 화면이 실제로 보일 때만 보낸다(방에 들어올 때, 보고 있는 동안 상대 메시지가 올 때,
  * 백그라운드 탭이 다시 보일 때). 다른 탭을 보고 있는데 상대에게 "읽음"이 뜨면 거짓 표시가 된다.
  *
+ * 거래 버튼은 서버가 준 tradeActions 만 보고 보여준다. 거래 변경은 시스템 메시지로 실시간 전달되므로
+ * 시스템 메시지를 받으면 방 정보만 다시 불러와 상대가 바꾼 거래 상태를 맞춘다.
+ *
  * 재연결되면 최신 페이지로 다시 불러온다. 끊긴 동안의 메시지는 이벤트로 다시 오지 않는다.
  * 이미 불러온 이전 메시지와 이어 붙이지 않고 바꾸는 이유: 끊긴 동안 메시지가 한 페이지보다 많이 오면
  * 중간이 빈 채로 이어 붙게 된다.
@@ -35,6 +40,10 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct }) 
   const [sendError, setSendError] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [failedImage, setFailedImage] = useState(false);
+  const [infoReload, setInfoReload] = useState(0);
+  const [tradePending, setTradePending] = useState(false);
+  const [tradeError, setTradeError] = useState("");
+  const tradeBusy = useRef(false);
   const alive = useRef(true);
   const sendingRef = useRef(false);
   const olderController = useRef(null);
@@ -77,11 +86,22 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct }) 
     return () => { abort.abort(); olderController.current?.abort(); };
   }, [roomId, reload]);
 
+  // 방 정보만 다시 불러온다(거래 상태 변경). 첫 로드는 위 effect 가 한다.
+  useEffect(() => {
+    if (infoReload === 0) return undefined;
+    const abort = new AbortController();
+    fetchChatRoom(roomId, abort.signal)
+      .then((data) => { if (!abort.signal.aborted) setInfo({ data, loading: false, error: "" }); })
+      .catch(() => { /* 다음 이벤트나 재연결 때 다시 맞춘다. 대화는 계속할 수 있다. */ });
+    return () => abort.abort();
+  }, [roomId, infoReload]);
+
   useEffect(() => {
     const offEvent = chatSocket.onEvent((event) => {
       if (event.roomId !== roomId) return;
       if (event.type === "MESSAGE") {
         setMessages((old) => ({ ...old, items: mergeById(old.items, [event.message]) }));
+        if (event.message.type === "SYSTEM") setInfoReload((value) => value + 1);
         if (event.message.senderId !== me) {
           // 상대가 말을 걸었다면 방에 돌아온 것이다.
           setInfo((old) => old.data ? { ...old, data: { ...old.data, opponentLeft: false } } : old);
@@ -158,6 +178,26 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct }) 
     submit();
   }
 
+  async function tradeAction(kind) {
+    if (tradeBusy.current) return;
+    const confirmText = {
+      complete: "거래완료로 바꿀까요? 상품이 판매완료가 되고 되돌릴 수 없어요.",
+      cancel: "예약을 취소할까요? 상품이 다시 판매중이 돼요.",
+    }[kind];
+    if (confirmText && !window.confirm(confirmText)) return;
+    tradeBusy.current = true; setTradePending(true); setTradeError("");
+    try {
+      const call = { reserve: reserveTrade, cancel: cancelReservation, complete: completeTrade }[kind];
+      const data = await call(roomId);
+      if (alive.current) setInfo({ data, loading: false, error: "" });
+    } catch (error) {
+      if (alive.current) setTradeError(error.message);
+    } finally {
+      tradeBusy.current = false;
+      if (alive.current) setTradePending(false);
+    }
+  }
+
   async function leave() {
     if (leaving || !window.confirm("채팅방을 나갈까요? 내 채팅 목록에서 사라집니다.")) return;
     setLeaving(true); setSendError("");
@@ -203,6 +243,18 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct }) 
       </span>
     </button>}
 
+    {room && (room.trade || room.tradeActions.reserve) && <section className={styles.tradeBar} aria-label="거래">
+      <span className={styles.tradeStatus}>
+        {room.trade ? tradeStatusLabel(room.trade.status) : "이 구매자와 거래를 시작할 수 있어요"}
+      </span>
+      <span className={styles.tradeButtons}>
+        {room.tradeActions.reserve && <button className={styles.tradePrimary} disabled={tradePending} onClick={() => tradeAction("reserve")}>예약하기</button>}
+        {room.tradeActions.complete && <button className={styles.tradePrimary} disabled={tradePending} onClick={() => tradeAction("complete")}>거래완료</button>}
+        {room.tradeActions.cancel && <button className={styles.tradeSecondary} disabled={tradePending} onClick={() => tradeAction("cancel")}>예약 취소</button>}
+      </span>
+      {tradeError && <p className={styles.tradeError} role="alert">{tradeError}</p>}
+    </section>}
+
     <div className={styles.messages} ref={scroller} onScroll={onScroll} aria-live="polite">
       {messages.hasNext && <button className={styles.older} onClick={loadOlder} disabled={messages.loadingOlder}>
         {messages.loadingOlder ? "불러오는 중…" : "이전 메시지 보기"}</button>}
@@ -216,6 +268,12 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct }) 
       {messages.items.map((message, index) => {
         const mine = message.senderId === me;
         const newDay = dayOf(message.createdAt) !== dayOf(messages.items[index - 1]?.createdAt);
+        if (message.type === "SYSTEM") {
+          return <div key={message.id}>
+            {newDay && <p className={styles.day}>{formatChatDay(message.createdAt)}</p>}
+            <p className={styles.system}>{message.content} <time dateTime={message.createdAt}>{formatChatTime(message.createdAt)}</time></p>
+          </div>;
+        }
         return <div key={message.id}>
           {newDay && <p className={styles.day}>{formatChatDay(message.createdAt)}</p>}
           <div className={styles.row + (mine ? " " + styles.mine : "")}>

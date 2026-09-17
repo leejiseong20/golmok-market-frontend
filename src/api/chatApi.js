@@ -25,3 +25,10 @@ export const sendMessage = (roomId, content) =>
 export const markChatRead = (roomId) => client.request(`${room(roomId)}/read`, { method: "PATCH" });
 
 export const leaveChatRoom = (roomId) => client.request(room(roomId), { method: "DELETE" });
+
+// 직거래 버튼. 응답은 갱신된 채팅방 정보(trade, tradeActions 포함)라 방을 다시 부르지 않는다.
+export const reserveTrade = (roomId) => client.request(`${room(roomId)}/reservation`, { method: "POST" });
+
+export const cancelReservation = (roomId) => client.request(`${room(roomId)}/reservation`, { method: "DELETE" });
+
+export const completeTrade = (roomId) => client.request(`${room(roomId)}/completion`, { method: "POST" });

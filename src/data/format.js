@@ -19,7 +19,7 @@ export function formatDate(value) {
 }
 
 export const tradeStatusLabel = (status) => ({
-  REQUESTED: "거래 요청", PAID: "결제 완료", SHIPPING: "배송 중",
+  REQUESTED: "예약중", PAID: "결제 완료", SHIPPING: "배송 중",
   CONFIRMED: "구매 확정", CANCELED: "거래 취소", REFUNDED: "환불 완료",
 }[status] ?? status);
 

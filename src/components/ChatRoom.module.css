@@ -91,3 +91,35 @@
   .room { height: calc(100dvh - 220px); min-height: 420px; }
   .back { display: none; }
 }
+
+/* 거래 줄: 상품 아래, 대화 위. 좁은 화면에서는 버튼이 다음 줄로 내려간다. */
+.tradeBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--accent-soft);
+}
+.tradeStatus { font-size: 14px; font-weight: 700; color: var(--accent); }
+.tradeButtons { display: flex; gap: 6px; flex-wrap: wrap; }
+.tradePrimary, .tradeSecondary { border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 700; }
+.tradePrimary { border: none; background: var(--accent); color: white; }
+.tradeSecondary { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-3); }
+.tradeError { flex-basis: 100%; color: #a12c1e; font-size: 13px; line-height: 1.5; }
+
+.system {
+  align-self: center;
+  max-width: 90%;
+  margin: 6px auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-size: 13px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.system time { margin-left: 4px; font-size: 11px; color: var(--ink-4); }
