@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://YOUR_SUBDOMAIN.duckdns.org/api/:path*"
+      "destination": "https://golmok-api.duckdns.org/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
