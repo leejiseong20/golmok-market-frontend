@@ -307,7 +307,13 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
       <div className={styles.inputRow}>
         <textarea aria-label="메시지 입력" placeholder={withdrawn ? "탈퇴한 사용자에게는 보낼 수 없어요" : "메시지를 입력하세요"}
           rows={1} maxLength={MAX_LENGTH}
-          value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} disabled={!room || withdrawn} />
+          value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown}
+          onFocus={() => {
+            // iOS 는 입력창을 화면에 넣으려고 페이지를 스크롤해 상단 헤더를 밀어낸다.
+            // 방 높이는 이미 보이는 높이에 맞춰져 있으므로 맨 위로 되돌리면 헤더가 계속 보인다.
+            setTimeout(() => window.scrollTo(0, 0), 300);
+          }}
+          disabled={!room || withdrawn} />
         <button type="submit" className={styles.send} disabled={sending || !draft.trim() || !room || withdrawn}>
           {sending ? "전송 중" : "전송"}</button>
       </div>

@@ -70,12 +70,14 @@ test("키보드를 닫으면 표시를 지운다", () => {
   assert.equal(root.dataset.keyboard, undefined);
 });
 
-test("화면이 밀린 만큼(offsetTop)도 가린 높이에 넣는다", () => {
+test("화면이 밀려 올라가도(offsetTop) 키보드 높이는 보이는 높이로만 잰다", () => {
   globalThis.innerHeight = 800;
   const root = fakeRoot();
-  watchViewport(root, fakeViewport(600, 100));
+  // iOS 는 키보드를 띄우며 페이지를 밀어 올린다. offsetTop 을 빼면 키보드를 못 알아챈다.
+  watchViewport(root, fakeViewport(450, 200));
 
-  assert.equal(root.read("--kb"), "100px");
+  assert.equal(root.read("--kb"), "350px");
+  assert.equal(root.dataset.keyboard, "open");
 });
 
 test("정리 함수는 등록한 청취를 모두 거둔다", () => {

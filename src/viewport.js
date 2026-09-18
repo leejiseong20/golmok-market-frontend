@@ -19,7 +19,12 @@ export function watchViewport(root = document.documentElement, viewport = global
   if (!viewport) return () => {};
 
   const apply = () => {
-    const hidden = Math.max(0, globalThis.innerHeight - viewport.height - viewport.offsetTop);
+    /*
+     * 키보드가 가린 높이 = 레이아웃 높이 - 실제로 보이는 높이.
+     * offsetTop(화면이 밀려 올라간 정도)은 빼지 않는다. iOS 는 키보드를 띄우며 페이지를 밀어 올리는데,
+     * 그 값을 빼면 키보드 높이가 작게 계산돼 "열림"으로 판정되지 않는다(실제로 이 버그가 있었다).
+     */
+    const hidden = Math.max(0, globalThis.innerHeight - viewport.height);
     root.style.setProperty("--vvh", `${Math.round(viewport.height)}px`);
     root.style.setProperty("--kb", `${Math.round(hidden)}px`);
     if (hidden > KEYBOARD_THRESHOLD) root.dataset.keyboard = "open";
