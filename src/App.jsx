@@ -15,6 +15,8 @@ import UserProfile from "./components/UserProfile.jsx";
 import NotificationPanel from "./components/NotificationPanel.jsx";
 import NotFound from "./components/NotFound.jsx";
 import PopularKeywords from "./components/PopularKeywords.jsx";
+import EmptyState from "./components/EmptyState.jsx";
+import { ProductListSkeleton } from "./components/Skeleton.jsx";
 import { client } from "./api/client.js";
 import { chatSocket } from "./api/chatSocket.js";
 import { fetchChatUnreadCount, openChatRoom } from "./api/chatApi.js";
@@ -329,6 +331,17 @@ export default function App() {
     }
   }
 
+  /**
+   * 상세 모달에서 찜을 눌렀다. 목록·상세는 toggleFavorite 이 이미 맞추고,
+   * 여기서는 마이페이지만 다시 불러온다. 찜한 상품 탭은 해제한 항목이 목록에서 빠져야 하는데
+   * 그 목록은 서버가 주는 것이라 화면에서 지울 수 없다.
+   */
+  async function favoriteFromDetail(product) {
+    const result = await toggleFavorite(product);
+    if (result) setProductRevision((value) => value + 1);
+    return result;
+  }
+
   /** 열린 상세를 서버 응답으로 바꾸고, 기억해 둔 응답도 같이 바꾼다(뒤로가기로 돌아와도 최신 값). */
   function patchDetail(mapper) {
     setDetail((old) => {
@@ -398,29 +411,34 @@ export default function App() {
   const homePage = <main className={styles.shell}>
     <section aria-label="상품 목록">
       {accountError && <p className={styles.error} role="alert">{accountError}</p>}
-      {categoryError && <div className={styles.error} role="alert">{categoryError}<button onClick={() => setCategoryRetry((value) => value + 1)}>카테고리 다시 시도</button></div>}
+      {categoryError && <div className={styles.error} role="alert">{categoryError}<button className="btn btn-outline btn-sm" onClick={() => setCategoryRetry((value) => value + 1)}>카테고리 다시 시도</button></div>}
       <div className={styles.feedHead}>
         <div>
           <h1 className={styles.title}>{region ? region.dong + "의 이웃 물건" : "우리 동네에서 발견하는 좋은 물건"}</h1>
-          <p className={styles.sub}>{keyword ? keyword + " 검색 · " : ""}{region ? "불러온 상품 " + feed.items.length + "개" : "먼저 둘러볼 동네를 선택해 주세요."}</p>
+          {/* 동네를 안 고른 상태의 안내는 아래 빈 상태가 하므로 여기서 또 적지 않는다. */}
+          {region && <p className={styles.sub}>{keyword ? keyword + " 검색 · " : ""}불러온 상품 {feed.items.length}개</p>}
         </div>
         <label className={styles.sortLabel}>정렬<select className={styles.sortBtn} value={sort} onChange={(e) => changeHomeQuery({ sort: e.target.value })} aria-label="상품 정렬">
           <option value="LATEST">최신순</option><option value="PRICE_ASC">낮은 가격순</option>
         </select></label>
       </div>
-      {!region && <div className={styles.empty}><p>가까운 이웃의 물건을 찾아보세요.</p><button onClick={() => setModal("region")}>동네 선택하기</button></div>}
-      {feed.loading && <p className={styles.empty} role="status">상품을 불러오고 있어요…</p>}
-      {feed.error && <div className={styles.error} role="alert">{feed.error}<button onClick={() => feed.items.length ? more() : setRetry((value) => value + 1)}>다시 시도</button></div>}
-      {region && !feed.loading && !feed.error && feed.items.length === 0 && <p className={styles.empty} role="status">아직 조건에 맞는 상품이 없어요. 다른 동네나 검색어로 찾아보세요.</p>}
+      {!region && <EmptyState title="먼저 둘러볼 동네를 선택해 주세요" description="동네를 고르면 근처 이웃이 올린 물건을 보여드려요."
+        actionLabel="동네 선택하기" onAction={() => setModal("region")} />}
+      {feed.loading && <ProductListSkeleton />}
+      {feed.error && <div className={styles.error} role="alert">{feed.error}<button className="btn btn-outline btn-sm" onClick={() => feed.items.length ? more() : setRetry((value) => value + 1)}>다시 시도</button></div>}
+      {region && !feed.loading && !feed.error && feed.items.length === 0 &&
+        <EmptyState title={keyword ? `"${keyword}" 검색 결과가 없어요` : "아직 이 동네에 올라온 물건이 없어요"}
+          description="다른 동네나 검색어로 찾아보거나, 첫 물건을 올려보세요." />}
       <div className={styles.feed}>{feed.items.map((product) => <ProductCard key={product.id} product={product}
-        onOpen={() => openProduct(product.id)} onToggleFavorite={toggleFavorite} />)}</div>
-      {feed.hasNext && <button className={styles.more} onClick={more} disabled={feed.loadingMore}>{feed.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
+        onOpen={() => openProduct(product.id)} />)}</div>
+      {feed.hasNext && <button className={"btn btn-outline btn-block " + styles.more} onClick={more} disabled={feed.loadingMore}>{feed.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
     </section>
     <Sidebar onRegionClick={navigation.onRegionClick} onKeyword={(value) => changeHomeQuery({ keyword: value })} />
   </main>;
   const chatScreen = <ChatScreen user={user} onHome={goHome} onLogin={login} onSelectRoom={selectRoom}
     onOpenProduct={openProduct} onOpenProfile={openProfile} />;
   const myScreen = <MyScreen user={user} onHome={goHome} onTabChange={(tab) => navigate(paths.my(tab))}
+    onLogout={signOut} loggingOut={loggingOut}
     refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite}
     onRegionsChange={applyPrimaryRegion} onLogin={login} />;
 
@@ -445,7 +463,8 @@ export default function App() {
     </Routes>
     <BottomNav {...navigation} />
     {/* 채팅 화면에서는 떠 있는 등록 버튼이 입력창의 전송 버튼을 가린다. */}
-    {view !== "chat" && <button className={styles.writeButton} onClick={writeProduct}>＋ 상품 등록</button>}
+    {view !== "chat" && <button className={styles.writeButton} onClick={writeProduct} aria-label="상품 등록">
+      <span className={styles.writeIcon} aria-hidden="true">＋</span><span className={styles.writeLabel}>상품 등록</span></button>}
     <footer className={styles.footer + " " + styles.pcOnly}><div className={styles.footerInner}><span>골목마켓 · 동네 기반 중고거래 플랫폼</span><span>이웃의 물건에 새로운 일상을</span></div></footer>
     {modal === "auth" && <AuthModal onClose={() => setModal(null)} />}
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
@@ -454,6 +473,7 @@ export default function App() {
     {detail && <ProductDetail key={detail.key} detail={detail} onClose={closeModal}
       onRetry={() => setDetailRetry((value) => value + 1)}
       onEdit={(product) => { setEditor({ product }); closeModal(); }} onChanged={detailChanged} onStartChat={startChat}
+      onToggleFavorite={favoriteFromDetail}
       onOpenProfile={openProfile}
       onDeleted={() => { setProductRevision((v) => v + 1); setRetry((v) => v + 1); closeModal(); }} />}
     {editor && <ProductForm key={editor.product?.id ?? "new"} product={editor.product} categories={categories}

@@ -49,18 +49,7 @@
 
 .buttons button:disabled { opacity: 0.5; cursor: default; }
 
-.primary {
-  border: none;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.primary:disabled { opacity: 0.5; cursor: default; }
+.primary { composes: btn btn-primary btn-sm from global; }
 
 .empty, .note { font-size: 13px; color: var(--ink-4); }
 

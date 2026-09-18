@@ -1,0 +1,58 @@
+.block {
+  display: block;
+  width: 100%;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 흐르는 빛으로 "멈춘 화면"이 아니라 기다리는 중임을 알린다. 모션을 줄인 환경에서는 면만 남는다. */
+.block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, #ffffffb3, transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block::after { animation: none; content: none; }
+}
+
+.rows { display: grid; gap: var(--s3); }
+
+.lines { display: grid; gap: var(--s2); align-content: center; min-width: 0; }
+
+.chatRow {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: var(--s3);
+  align-items: center;
+  padding: var(--s3);
+}
+
+/* 실제 상품 카드와 같은 그리드·간격이라 결과가 도착해도 자리가 그대로다. */
+.products { display: grid; grid-template-columns: 1fr; }
+
+.productCard {
+  display: grid;
+  grid-template-columns: 104px 1fr;
+  gap: var(--s4);
+  padding: var(--s4) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.productCard > .block:first-child { aspect-ratio: 1 / 1; height: auto; border-radius: var(--radius); }
+
+@media (min-width: 880px) {
+  .products { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s7) var(--s5); }
+  .productCard { grid-template-columns: 1fr; gap: var(--s3); padding: 0; border-bottom: none; }
+  .productCard > .block:first-child { border-radius: var(--radius-lg); }
+}

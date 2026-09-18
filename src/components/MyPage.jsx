@@ -7,6 +7,8 @@ import ReviewList from "./ReviewList.jsx";
 import Avatar from "./Avatar.jsx";
 import ProfileForm from "./ProfileForm.jsx";
 import WithdrawForm from "./WithdrawForm.jsx";
+import EmptyState from "./EmptyState.jsx";
+import { BlockListSkeleton, ProductListSkeleton } from "./Skeleton.jsx";
 import { client } from "../api/client.js";
 import { fetchMe, fetchMyFavorites } from "../api/userApi.js";
 import { confirmPurchase, fetchMyPurchases } from "../api/tradeApi.js";
@@ -30,7 +32,7 @@ const emptyList = { tab: null, items: [], cursor: null, hasNext: false, loading:
  * 목록에 어느 탭의 데이터인지(list.tab)를 함께 둔다. 뒤로가기로 탭이 바뀌면 effect 가 새 데이터를 받기 전에
  * 한 번 렌더링되는데, 이때 이전 탭 항목을 새 탭의 카드로 그리면 형태가 달라 터진다. 탭이 다르면 비어 있는 것으로 본다.
  */
-export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggleFavorite, onLogin, onHome, onRegionsChange, refreshKey = 0 }) {
+export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggleFavorite, onLogin, onLogout, loggingOut, onHome, onRegionsChange, refreshKey = 0 }) {
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
   const [loaded, setList] = useState(emptyList);
@@ -136,7 +138,7 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
         <h1 className={styles.title}>{profile?.nickname ?? user.nickname}</h1>
         {profileError
           ? <p className={styles.error} role="alert">{profileError}
-              <button onClick={() => setRetry((value) => value + 1)}>다시 시도</button></p>
+              <button className="btn btn-outline btn-sm" onClick={() => setRetry((value) => value + 1)}>다시 시도</button></p>
           : <p className={styles.temp}>매너온도 <strong>{profile ? `${profile.mannerTemp}℃` : "…"}</strong></p>}
       </div>
       {profile && <button className={styles.editProfile} onClick={() => setEditingProfile(true)}>프로필 수정</button>}
@@ -158,13 +160,16 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
         moreController.current?.abort(); setSaleStatus(e.target.value); setList({ ...emptyList, tab, loading: true });
       }}><option value="">전체</option><option value="ON_SALE">판매중</option><option value="RESERVED">예약중</option><option value="SOLD">판매완료</option></select></label>}
       {actionError && <div className={styles.error} role="alert">{actionError}</div>}
-      {list.loading && <p className={styles.empty} role="status">불러오고 있어요…</p>}
+      {list.loading && (tab === "purchases"
+        ? <BlockListSkeleton label="구매내역을 불러오는 중" />
+        : <ProductListSkeleton count={3} label="목록을 불러오는 중" />)}
       {list.error && <div className={styles.error} role="alert">{list.error}
-        <button onClick={() => (list.items.length ? more() : setRetry((value) => value + 1))}>다시 시도</button></div>}
-      {!list.loading && !list.error && list.items.length === 0 && <p className={styles.empty} role="status">
-        {tab === "favorites"
-          ? "아직 찜한 상품이 없어요. 마음에 드는 물건의 하트를 눌러보세요."
-          : tab === "sales" ? "조건에 맞는 판매 상품이 없어요." : "아직 구매한 상품이 없어요."}</p>}
+        <button className="btn btn-outline btn-sm" onClick={() => (list.items.length ? more() : setRetry((value) => value + 1))}>다시 시도</button></div>}
+      {!list.loading && !list.error && list.items.length === 0 && (tab === "favorites"
+        ? <EmptyState compact title="아직 찜한 상품이 없어요" description="마음에 드는 물건의 하트를 누르면 여기에 모여요." />
+        : tab === "sales"
+          ? <EmptyState compact title="조건에 맞는 판매 상품이 없어요" description="판매 상태 필터를 바꾸거나 새 물건을 올려보세요." />
+          : <EmptyState compact title="아직 구매한 상품이 없어요" description="채팅으로 거래를 마치면 구매내역에 남아요." />)}
 
       {tab !== "purchases"
         ? <div className={styles.feed}>
@@ -179,8 +184,15 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
       {list.hasNext && <button className={styles.more} onClick={more} disabled={list.loadingMore}>
         {list.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
     </section>}
-    {/* 자주 누를 일이 없고 실수로 누르면 안 되는 동작이라 페이지 맨 아래에 작게 둔다. */}
-    {profile && <p className={styles.withdraw}><button onClick={() => setWithdrawing(true)}>회원 탈퇴</button></p>}
+    {/*
+      계정 동작은 페이지 맨 아래에 둔다. 하단 탭에서 로그아웃을 뺀 뒤로 모바일의 로그아웃 자리이기도 하다.
+      탈퇴는 되돌릴 수 없어 실수로 누르지 않게 조용한 글자 링크로 둔다.
+    */}
+    {profile && <div className={styles.account}>
+      <button className="btn btn-outline btn-sm" onClick={onLogout} disabled={loggingOut}>
+        {loggingOut ? "처리 중…" : "로그아웃"}</button>
+      <button className={styles.withdraw} onClick={() => setWithdrawing(true)}>회원 탈퇴</button>
+    </div>}
     {withdrawing && <WithdrawForm onClose={() => setWithdrawing(false)} onWithdrawn={() => {
       // 서버가 refresh token 을 모두 지웠으므로 이 기기의 세션만 지우면 된다. 홈으로 먼저 옮겨 빈 마이페이지를 거치지 않는다.
       onHome();

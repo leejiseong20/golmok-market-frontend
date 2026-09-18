@@ -3,6 +3,8 @@ import { fetchChatRooms } from "../api/chatApi.js";
 import { chatSocket } from "../api/chatSocket.js";
 import Avatar from "./Avatar.jsx";
 import { relativeTime, statusLabel } from "../data/format.js";
+import EmptyState from "./EmptyState.jsx";
+import { ChatListSkeleton } from "./Skeleton.jsx";
 import styles from "./ChatList.module.css";
 
 const emptyList = { items: [], cursor: null, hasNext: false, loading: true, loadingMore: false, error: "" };
@@ -89,11 +91,11 @@ export default function ChatList({ me, selectedId, onSelect }) {
   }
 
   return <div>
-    {list.loading && <p className={styles.empty} role="status">채팅 목록을 불러오고 있어요…</p>}
+    {list.loading && <ChatListSkeleton />}
     {list.error && <div className={styles.error} role="alert">{list.error}
-      <button onClick={() => (list.items.length ? more() : setReload((value) => value + 1))}>다시 시도</button></div>}
-    {!list.loading && !list.error && list.items.length === 0 && <p className={styles.empty} role="status">
-      아직 대화가 없어요. 마음에 드는 상품에서 채팅하기를 눌러보세요.</p>}
+      <button className="btn btn-outline btn-sm" onClick={() => (list.items.length ? more() : setReload((value) => value + 1))}>다시 시도</button></div>}
+    {!list.loading && !list.error && list.items.length === 0 &&
+      <EmptyState compact title="아직 대화가 없어요" description="마음에 드는 상품에서 채팅하기를 누르면 여기에 쌓여요." />}
     <ul className={styles.list}>
       {list.items.map((room) => <li key={room.roomId}>
         <button className={styles.item + (room.roomId === selectedId ? " " + styles.selected : "")}
@@ -125,7 +127,7 @@ export default function ChatList({ me, selectedId, onSelect }) {
         </button>
       </li>)}
     </ul>
-    {list.hasNext && <button className={styles.more} onClick={more} disabled={list.loadingMore}>
+    {list.hasNext && <button className={"btn btn-outline btn-block " + styles.more} onClick={more} disabled={list.loadingMore}>
       {list.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
   </div>;
 }

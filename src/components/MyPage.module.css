@@ -42,38 +42,16 @@
 }
 
 .error {
-  display: flex;
-  align-items: center;
+  composes: alert alert-danger from global;
   justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 14px;
-  border-radius: var(--radius);
-  background: #fdecea;
+  margin-bottom: var(--s3);
+  background: var(--danger-bg);
   color: #8a2b20;
   font-size: 14px;
 }
 
-.error button, .primary, .more {
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--ink);
-  border-radius: 999px;
-  padding: 8px 16px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.primary {
-  margin-top: 14px;
-  border: none;
-  background: var(--accent);
-  color: #fff;
-  padding: 10px 20px;
-}
-
-.more { width: 100%; margin-top: 16px; padding: 12px; }
-.more:disabled { opacity: 0.6; cursor: default; }
+.primary { composes: btn btn-primary from global; margin-top: var(--s4); }
+.more { composes: btn btn-outline btn-block from global; margin-top: var(--s4); }
 
 .guest {
   padding: 60px 16px;
@@ -117,17 +95,11 @@
 
 .profileBody { flex: 1; min-width: 0; }
 .editProfile {
+  composes: btn btn-outline btn-sm from global;
   flex: none;
   align-self: center;
-  padding: 8px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink-2);
-  font-size: 13px;
-  font-weight: 600;
 }
 
-.withdraw { margin-top: 40px; text-align: right; }
-.withdraw button { padding: 6px 2px; border: none; background: none; color: var(--ink-4); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
-.withdraw button:hover { color: #a12c1e; }
+.account { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-top: var(--s8); }
+.withdraw { padding: var(--s2) 2px; border: none; background: none; color: var(--ink-4); font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 3px; }
+.withdraw:hover { color: var(--danger); }

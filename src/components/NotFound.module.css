@@ -2,4 +2,4 @@
 .box { padding: 48px 20px; text-align: center; background: var(--surface-2); border-radius: var(--radius); }
 .title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
 .sub { margin-top: 8px; color: var(--ink-4); font-size: 14px; line-height: 1.6; }
-.primary { margin-top: 20px; border: none; border-radius: 10px; background: var(--accent); color: white; padding: 12px 18px; font-weight: 600; }
+.primary { composes: btn btn-primary from global; margin-top: var(--s5); }

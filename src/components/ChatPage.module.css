@@ -2,7 +2,7 @@
 .title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
 .sub { margin-top: 6px; color: var(--ink-4); font-size: 14px; }
 .guest { padding: 48px 20px; text-align: center; background: var(--surface-2); border-radius: var(--radius); }
-.primary { margin-top: 18px; border: none; border-radius: 10px; background: var(--accent); color: white; padding: 12px 18px; font-weight: 600; }
+.primary { composes: btn btn-primary from global; margin-top: var(--s5); }
 .placeholder { display: none; }
 
 /* 모바일: 방을 열면 목록을 숨긴다. 하단 메뉴에 가리지 않도록 방 높이를 화면에 맞춘다. */

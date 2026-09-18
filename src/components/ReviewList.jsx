@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { fetchReviews } from "../api/reviewApi.js";
 import { formatDate } from "../data/format.js";
 import Avatar from "./Avatar.jsx";
+import EmptyState from "./EmptyState.jsx";
+import { BlockListSkeleton } from "./Skeleton.jsx";
 import styles from "./ReviewList.module.css";
 
 const empty = { items: [], cursor: null, hasNext: false, loading: true, error: "" };
@@ -43,9 +45,10 @@ export default function ReviewList({ userId }) {
   }
 
   return <section className={styles.list} aria-label="받은 후기">
-    {state.loading && <p role="status">후기를 불러오고 있어요…</p>}
-    {!state.loading && !state.error && !state.items.length && <p>아직 받은 후기가 없어요.</p>}
-    {state.error && <p role="alert">{state.error} <button onClick={() => state.items.length ? more() : setRetry((n) => n + 1)}>다시 시도</button></p>}
+    {state.loading && <BlockListSkeleton label="후기를 불러오는 중" height={112} />}
+    {!state.loading && !state.error && !state.items.length && <EmptyState compact title="아직 받은 후기가 없어요" description="거래를 마치면 상대가 남긴 후기가 여기에 쌓여요." />}
+    {state.error && <p className={styles.error} role="alert">{state.error}
+      <button className="btn btn-outline btn-sm" onClick={() => state.items.length ? more() : setRetry((n) => n + 1)}>다시 시도</button></p>}
     {state.items.map((review) => <article className={styles.card} key={review.id}>
       <header>
         <span className={styles.reviewer}>
@@ -57,6 +60,6 @@ export default function ReviewList({ userId }) {
       {review.content && <p>{review.content}</p>}
       <time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time>
     </article>)}
-    {state.hasNext && <button className={styles.more} disabled={morePending} onClick={more}>{morePending ? "불러오는 중…" : "후기 더 보기"}</button>}
+    {state.hasNext && <button className={"btn btn-outline " + styles.more} disabled={morePending} onClick={more}>{morePending ? "불러오는 중…" : "후기 더 보기"}</button>}
   </section>;
 }

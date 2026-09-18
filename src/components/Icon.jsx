@@ -1,0 +1,30 @@
+/**
+ * 화면에서 쓰는 선 아이콘 모음.
+ *
+ * ⌂ ◎ ◌ 같은 글자 기호를 쓰면 기기·글꼴마다 굵기와 크기가 달라 줄이 들쭉날쭉했다.
+ * 같은 굵기(1.8)와 같은 격자(24)로 그린 SVG 를 한 곳에 모아 쓴다.
+ *
+ * 아이콘은 장식이라 항상 보조기기에서 숨긴다. 뜻은 옆의 글자나 버튼의 aria-label 이 전한다.
+ */
+const PATHS = {
+  /** 집 */
+  home: <><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" /><path d="M9.5 20v-6h5v6" /></>,
+  /** 지도 핀 */
+  pin: <><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z" /><circle cx="12" cy="10" r="2.6" /></>,
+  /** 말풍선 */
+  chat: <path d="M20 12.5c0 3.6-3.6 6.5-8 6.5a9.6 9.6 0 0 1-2.6-.35L5 20.5l1.1-3.1A6.3 6.3 0 0 1 4 12.5C4 8.9 7.6 6 12 6s8 2.9 8 6.5z" />,
+  /** 사람 */
+  user: <><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5" /></>,
+  /** 카메라 */
+  camera: <><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.3-2.2h6l1.3 2.2h2.2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5z" /><circle cx="12" cy="13" r="3.4" /></>,
+  /** 하트 */
+  heart: <path d="M12 20s-7-4.4-7-9.3A3.9 3.9 0 0 1 12 8a3.9 3.9 0 0 1 7 2.7C19 15.6 12 20 12 20z" />,
+};
+
+export default function Icon({ name, size = 20, filled = false, className }) {
+  return <svg className={className} viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false"
+    fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round">
+    {PATHS[name]}
+  </svg>;
+}

@@ -6,14 +6,14 @@
   bottom: 84px;
   z-index: 30;
   height: 52px;
-  padding: 0 20px;
+  padding: 0 var(--s5);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent);
   color: #fff;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 700;
-  box-shadow: 0 8px 20px #17140f26;
+  box-shadow: var(--shadow-2);
 }
 
 .nav {
@@ -27,35 +27,37 @@
   backdrop-filter: blur(8px);
 }
 
-.tabs { display: grid; grid-template-columns: repeat(5, 1fr); }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
 
 .tab {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--s1);
   min-height: 58px;
   border: none;
   background: none;
   color: var(--ink-4);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
 }
 
 .on { color: var(--accent); }
+/* 색약이어도 현재 탭을 알 수 있게 색 외에 표시선을 하나 더 둔다. */
+.on::before { content: ""; position: absolute; top: 0; width: 26px; height: 2px; border-radius: 0 0 2px 2px; background: var(--accent); }
 
-.icon { font-size: 19px; line-height: 1; }
+.icon { position: relative; display: grid; place-items: center; height: 20px; }
 
 @media (min-width: 880px) {
   .wrap { display: none; }
 }
 
-.icon { position: relative; }
 .count {
   position: absolute;
   top: -6px;
-  left: 12px;
+  left: 10px;
   min-width: 17px;
   padding: 0 4px;
   border-radius: 999px;

@@ -1,0 +1,16 @@
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--s2);
+  padding: var(--s9) var(--s5);
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.compact { padding: var(--s7) var(--s4); }
+
+.icon { color: var(--line-strong); margin-bottom: var(--s1); }
+.title { font-size: var(--fs-body); font-weight: 600; color: var(--ink-2); }
+.description { font-size: var(--fs-sm); line-height: 1.7; color: var(--ink-4); max-width: 34ch; }
+.empty button { margin-top: var(--s3); }

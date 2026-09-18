@@ -5,6 +5,5 @@
 .form select, .form textarea { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: white; color: var(--ink); font: inherit; }
 .form textarea { resize: vertical; }
 .hint { font-size: 13px; line-height: 1.6; color: var(--ink-4); }
-.error { color: #ae3434; }
-.submit { border: 0; border-radius: 10px; padding: 13px; background: var(--accent); color: white; font: inherit; font-weight: 700; cursor: pointer; }
-.submit:disabled { opacity: .5; cursor: default; }
+.error { color: var(--danger); }
+.submit { composes: btn btn-primary btn-lg btn-block from global; }

@@ -1,5 +1,13 @@
+/**
+ * 전역 토큰과 공용 컨트롤.
+ *
+ * 색만 토큰이고 간격·글자 크기는 컴포넌트마다 제각각이라 화면이 어긋났다.
+ * 간격·타이포·높이·그림자까지 스케일을 정해 두고, 각 CSS 모듈은 이 값만 쓴다.
+ * 버튼도 파일마다 다시 정의하던 것을 .btn 계열 한 벌로 모았다(모듈 CSS 와 함께 써도 이름이 겹치지 않는다).
+ */
 :root {
   --accent: #d2502f;
+  --accent-strong: #b54023;
   --accent-soft: #d2502f14;
   --accent-border: #d2502f3d;
 
@@ -14,9 +22,42 @@
   --ink-3: #5a5148;
   --ink-4: #6b6156;
 
+  /* 상태색. 그동안 #a12c1e·#fff0eb 를 여섯 파일에 직접 적어 두고 있었다. */
+  --danger: #a12c1e;
+  --danger-bg: #fff0eb;
+  --success: #2f6350;
+
+  /* 4px 배수 간격. 값 사이를 건너뛰지 않는다. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 32px;
+  --s8: 40px;
+  --s9: 56px;
+
+  /* 글자 크기. 본문은 15px 이고 그 위아래로만 움직인다. */
+  --fs-caption: 12px;
+  --fs-sm: 13px;
+  --fs-body: 15px;
+  --fs-lg: 17px;
+  --fs-title: 20px;
+  --fs-display: 28px;
+
   --radius-sm: 10px;
   --radius: 12px;
   --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* 버튼·입력칸 높이. 한 줄에 섞여도 높이가 맞는다. */
+  --control: 40px;
+  --control-sm: 32px;
+
+  --shadow-1: 0 1px 2px #17140f0f;
+  --shadow-2: 0 8px 24px #17140f1f;
+
   --shell-max: 1180px;
   --bp-pc: 880px;
 }
@@ -28,12 +69,86 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  font-size: var(--fs-body);
 }
 
 a { color: var(--ink); text-decoration: none; }
 a:hover { color: var(--accent); }
 button { font-family: inherit; cursor: pointer; }
-button:disabled { cursor: wait; opacity: .55; }
-button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+/* 비활성 버튼은 "기다리는 중"이 아니라 "지금은 누를 수 없음"이다. */
+button:disabled { cursor: default; opacity: .5; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 input, select { font-family: inherit; }
 h1, h2, h3, p, ul { margin: 0; }
+
+/* ---------- 공용 버튼 ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  min-height: var(--control);
+  padding: 0 var(--s4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--ink-2);
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); }
+
+.btn-outline { background: var(--surface); border-color: var(--line-strong); }
+.btn-outline:hover:not(:disabled) { border-color: var(--accent-border); color: var(--accent); }
+
+.btn-ghost { color: var(--ink-3); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+
+.btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 700; }
+.btn-danger:hover:not(:disabled) { filter: brightness(1.08); }
+
+.btn-sm { min-height: var(--control-sm); padding: 0 var(--s3); font-size: var(--fs-sm); }
+.btn-lg { min-height: 48px; padding: 0 var(--s5); font-size: var(--fs-lg); }
+.btn-block { width: 100%; }
+
+/* 눈으로만 읽는 아이콘 옆에 붙이는, 보조기기 전용 설명. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- 알림 줄 ---------- */
+
+.alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.alert-danger { color: var(--danger); background: var(--danger-bg); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
