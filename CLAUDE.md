@@ -125,6 +125,7 @@ src/
 - **버튼 모양은 `.btn` 한 곳에서만 정의한다.** 변형은 `btn-primary`/`btn-outline`/`btn-ghost`/`btn-danger`, 크기는 `btn-sm`/`btn-lg`/`btn-block`. 모듈 CSS 에서는 `composes: btn btn-primary from global;` 로 가져다 쓴다(`composes` 는 클래스 하나짜리 선택자에만 쓸 수 있다).
 - **색은 예외 없이 토큰으로 쓴다.** 어두운 화면은 `index.css` 의 색 토큰만 다시 정의해서 만든다. 컴포넌트 CSS 에 `#fff`·`white` 같은 값이 하나라도 남아 있으면 그 자리만 밝은 채로 남는다. 강조색 위 글자는 `--on-accent`, 위험 버튼 글자는 `--on-danger`, 입력칸 바탕은 `--field`, 반투명 덮개는 `--overlay`·`--surface-blur`·`--surface-veil` 를 쓴다.
 - **입력칸은 좁은 화면에서 16px 이하로 두지 않는다.** iOS 는 16px 보다 작은 입력칸을 터치하면 화면을 확대하고(끌 수 없다), 확대되면 위쪽이 화면 밖으로 밀려 무엇을 쓰는지 보이지 않는다. `index.css` 의 모바일 규칙이 `!important` 로 강제한다(컴포넌트마다 `font: inherit` 같은 더 강한 규칙이 있어서다).
+- **화면 맨 아래에 붙는 것은 홈바 높이를 더한다.** 하단 탭·떠 있는 등록 버튼·목록 아래 여백·채팅방 높이 모두 `env(safe-area-inset-bottom)` 을 반영한다. `index.html` 의 `viewport-fit=cover` 가 있어야 이 값이 실제 크기로 계산된다(둘 중 하나만 있으면 무의미하다).
 - **모바일 키보드 높이는 `viewport.js` 가 CSS 변수로 알려 준다**(`--vvh`·`--kb`·`<html data-keyboard>`). iOS 는 키보드가 올라와도 레이아웃을 줄이지 않고 덮기만 해서 `100dvh` 로 짠 화면이 잘린다. 채팅방 높이는 `var(--vvh, 100dvh)` 기준이고, 키보드가 올라오면 하단 탭을 숨겨 그 높이(`--nav-reclaimed`)를 화면에 돌려준다.
 - **브레이크포인트는 880px 하나.** 모바일 우선으로 쓰고 `@media (min-width: 880px)` 에서 PC 로 바꾼다.
 - **로딩은 `Skeleton.jsx`, 빈 목록은 `EmptyState.jsx`, 오류는 전역 `.alert.alert-danger` 로 그린다.** 새 목록 화면을 만들면 이 세 가지를 그대로 쓴다.

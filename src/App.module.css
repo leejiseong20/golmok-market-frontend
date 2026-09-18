@@ -5,7 +5,8 @@
   display: block;
   max-width: var(--shell-max);
   margin: 0 auto;
-  padding: var(--s3) var(--s4) 88px;
+  /* 아래 여백은 하단 탭(58px)과 떠 있는 버튼을 피한다. 아이폰 홈바 높이까지 더한다. */
+  padding: var(--s3) var(--s4) calc(88px + env(safe-area-inset-bottom, 0px));
 }
 
 .feedHead {
@@ -97,7 +98,7 @@
 .writeButton {
   position: fixed;
   right: var(--s4);
-  bottom: 74px;
+  bottom: calc(74px + env(safe-area-inset-bottom, 0px));
   z-index: 5;
   display: inline-flex;
   align-items: center;

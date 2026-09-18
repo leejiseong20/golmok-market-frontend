@@ -7,7 +7,7 @@
 .room {
   display: flex;
   flex-direction: column;
-  height: calc(var(--vvh, 100dvh) - 190px + var(--nav-reclaimed, 0px));
+  height: calc(var(--vvh, 100dvh) - 190px - env(safe-area-inset-bottom, 0px) + var(--nav-reclaimed, 0px));
   min-height: 360px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
