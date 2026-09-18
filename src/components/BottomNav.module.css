@@ -10,7 +10,7 @@
   border: none;
   border-radius: var(--radius-pill);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: var(--fs-lg);
   font-weight: 700;
   box-shadow: var(--shadow-2);
@@ -22,7 +22,7 @@
   right: 0;
   bottom: 0;
   z-index: 30;
-  background: #fffdfbf2;
+  background: var(--surface-blur);
   border-top: 1px solid var(--line);
   backdrop-filter: blur(8px);
 }
@@ -62,7 +62,7 @@
   padding: 0 4px;
   border-radius: 999px;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   font-size: 10px;
   font-weight: 700;
   line-height: 16px;

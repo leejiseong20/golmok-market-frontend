@@ -5,6 +5,7 @@ import {
 import { chatSocket } from "../api/chatSocket.js";
 import Avatar from "./Avatar.jsx";
 import ReviewForm from "./ReviewForm.jsx";
+import { toast } from "../toast.js";
 import { formatChatDay, formatChatTime, formatPrice, statusLabel, tradeStatusLabel } from "../data/format.js";
 import styles from "./ChatRoom.module.css";
 
@@ -206,7 +207,7 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
     setLeaving(true); setSendError("");
     try {
       await leaveChatRoom(roomId);
-      if (alive.current) onLeft();
+      if (alive.current) { onLeft(); toast.show("채팅방에서 나갔어요."); }
     } catch (error) {
       if (alive.current) { setSendError(error.message); setLeaving(false); }
     }

@@ -11,6 +11,12 @@ export default function AuthModal({ onClose }) {
   const [error, setError] = useState("");
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
+  /**
+   * 로그인 상태 유지. 켜면 localStorage 에, 끄면 sessionStorage 에 세션을 둔다(탭을 닫으면 사라진다).
+   * 기본값을 켬으로 둔다. 대부분 개인 기기에서 쓰고, 매번 다시 로그인하는 마찰이 컸다.
+   * 공용 PC 에서는 끄면 된다.
+   */
+  const [remember, setRemember] = useState(true);
   const isSignup = mode === "signup";
   async function submit(event) {
     event.preventDefault();
@@ -28,7 +34,7 @@ export default function AuthModal({ onClose }) {
         setMode("login"); setFields((old) => ({ ...old, password: "" }));
         setMessage("가입이 완료됐습니다. 로그인해 주세요.");
       } else {
-        await login({ email, password: fields.password });
+        await login({ email, password: fields.password }, { remember });
         onClose();
       }
     } catch (failure) {
@@ -53,6 +59,11 @@ export default function AuthModal({ onClose }) {
       {field("email", "이메일", { type: "email", maxLength: 100, autoComplete: "username" })}
       {field("password", "비밀번호", { type: "password", maxLength: 64, autoComplete: isSignup ? "new-password" : "current-password" })}
       {isSignup && field("nickname", "닉네임", { minLength: 2, maxLength: 30, autoComplete: "nickname" })}
+      {!isSignup && <label className={styles.remember}>
+        <input type="checkbox" checked={remember} disabled={busy} onChange={(event) => setRemember(event.target.checked)} />
+        로그인 상태 유지
+        <span className={styles.rememberNote}>공용 PC 에서는 꺼 주세요</span>
+      </label>}
       {error && <p className={styles.error} role="alert">{error}</p>}
       <button className={styles.primary} disabled={busy}>{busy ? "처리 중…" : isSignup ? "가입하기" : "로그인하기"}</button>
     </form>

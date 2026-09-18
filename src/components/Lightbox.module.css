@@ -1,0 +1,55 @@
+/* 사진에 집중하는 화면이라 테마와 무관하게 어둡다. 버튼만 사진 위에 떠 있다. */
+.dialog {
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #0d0b09f2;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.dialog::backdrop { background: #0d0b09f2; }
+
+.image {
+  max-width: calc(100vw - var(--s8));
+  max-height: calc(100dvh - 120px);
+  object-fit: contain;
+}
+
+.close, .prev, .next {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: #ffffff1f;
+  color: #fff;
+  font-size: var(--fs-title);
+  line-height: 1;
+}
+
+.close:hover, .prev:hover, .next:hover { background: #ffffff33; }
+.close:disabled, .prev:disabled, .next:disabled { opacity: .3; }
+
+.close { top: calc(var(--s4) + env(safe-area-inset-top, 0px)); right: var(--s4); }
+.prev { left: var(--s3); }
+.next { right: var(--s3); }
+
+.count {
+  position: absolute;
+  bottom: calc(var(--s6) + env(safe-area-inset-bottom, 0px));
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  background: #0000004d;
+  padding: var(--s1) var(--s3);
+  border-radius: var(--radius-pill);
+}

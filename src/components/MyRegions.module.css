@@ -20,7 +20,7 @@
   flex-wrap: wrap;
   padding: 10px 12px;
   border-radius: 10px;
-  background: #faf7f4;
+  background: var(--surface-2);
 }
 
 .name { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
@@ -31,7 +31,7 @@
   padding: 2px 7px;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .verify { font-size: 13px; color: var(--ink-4); }
@@ -39,7 +39,7 @@
 
 .buttons button {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   border-radius: 999px;
   padding: 5px 12px;
   font-size: 13px;
@@ -57,6 +57,6 @@
   font-size: 13px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: #fdecea;
-  color: #8a2b20;
+  background: var(--danger-bg);
+  color: var(--danger);
 }

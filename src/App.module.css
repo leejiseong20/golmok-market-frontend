@@ -108,7 +108,7 @@
   padding: 0;
   border: 0;
   border-radius: var(--radius-pill);
-  color: white;
+  color: var(--on-accent);
   background: var(--accent);
   box-shadow: var(--shadow-2);
   font-size: var(--fs-body);

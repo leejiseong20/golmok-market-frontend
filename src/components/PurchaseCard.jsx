@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatPrice, formatDate, tradeStatusLabel } from "../data/format.js";
+import { thumbnailUrl } from "../api/imageUrl.js";
 import styles from "./PurchaseCard.module.css";
 
 export default function PurchaseCard({ purchase, onOpenProduct, onConfirm, onReview }) {
@@ -31,11 +32,11 @@ export default function PurchaseCard({ purchase, onOpenProduct, onConfirm, onRev
         aria-label={product.title + (product.deleted ? " (삭제된 상품)" : " 상세 보기")}>
         <div className={styles.media}>
           {product.thumbnailUrl && !failed
-            ? <img src={product.thumbnailUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
+            ? <img src={thumbnailUrl(product.thumbnailUrl)} alt="" loading="lazy" onError={() => setFailed(true)} />
             : <span className={styles.slot}>사진 없음</span>}
         </div>
         <div className={styles.info}>
-          <h3 className={styles.title}>{product.title}</h3>
+          <h2 className={styles.title}>{product.title}</h2>
           <p className={styles.price}>{formatPrice(purchase.amount)}</p>
           <p className={styles.meta}>{seller.nickname}{product.deleted && " · 삭제된 상품"}</p>
         </div>

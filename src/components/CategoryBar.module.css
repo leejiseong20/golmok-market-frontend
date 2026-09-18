@@ -22,8 +22,8 @@
 }
 .chip:hover { border-color: var(--accent-border); color: var(--accent); }
 
-.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-.on:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
+.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.on:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); }
 
 @media (min-width: 880px) {
   .row { padding: 0; overflow: visible; flex-wrap: wrap; }

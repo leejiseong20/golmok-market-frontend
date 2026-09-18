@@ -188,3 +188,56 @@ test("프로필 수정 뒤 저장된 사용자 정보를 바꾸고, 다른 계�
   client.updateUser(1, { nickname: "로그아웃뒤" });
   assert.equal(client.getSession(), null);
 });
+
+// ---------- 로그인 상태 유지 ----------
+
+/** 빈 저장소. 로그인 전이라 저장된 세션이 없다. */
+function emptyStorage() {
+  let saved = null;
+  return { getItem: () => saved, setItem: (_, value) => { saved = value; }, removeItem: () => { saved = null; } };
+}
+const loginOk = async () => Response.json(original);
+
+test("로그인 상태 유지를 켜면 오래 남는 저장소에 넣고 탭 저장소는 비운다", async () => {
+  const tab = emptyStorage(); const keep = emptyStorage();
+  const client = createApiClient({ storage: tab, persistentStorage: keep, fetchImpl: loginOk });
+
+  await client.login({ email: "a@b.c", password: "x" }, { remember: true });
+
+  assert.equal(JSON.parse(keep.getItem()).refreshToken, "old-refresh");
+  assert.equal(tab.getItem(), null);
+});
+
+test("로그인 상태 유지를 끄면 탭 저장소에만 넣는다", async () => {
+  const tab = emptyStorage(); const keep = emptyStorage();
+  const client = createApiClient({ storage: tab, persistentStorage: keep, fetchImpl: loginOk });
+
+  await client.login({ email: "a@b.c", password: "x" });
+
+  assert.equal(JSON.parse(tab.getItem()).refreshToken, "old-refresh");
+  assert.equal(keep.getItem(), null);
+});
+
+test("오래 남는 저장소의 세션을 먼저 복원하고, 갱신도 그쪽에 이어 쓴다", async () => {
+  const tab = emptyStorage(); const keep = storage();
+  const client = createApiClient({ storage: tab, persistentStorage: keep, fetchImpl: async (url, options) => {
+    if (url.endsWith("/auth/reissue")) return Response.json(rotated);
+    return options.headers.Authorization === "Bearer old-access" ? expired() : Response.json({ ok: true });
+  } });
+  assert.equal(client.getSession().user.nickname, "사용자");
+
+  await client.request("/me");
+
+  assert.equal(JSON.parse(keep.getItem()).refreshToken, "new-refresh");
+  assert.equal(tab.getItem(), null);
+});
+
+test("유지를 껐다가 켜면 이전 저장소에 세션이 남지 않는다", async () => {
+  const tab = storage(); const keep = emptyStorage();
+  const client = createApiClient({ storage: tab, persistentStorage: keep, fetchImpl: loginOk });
+
+  await client.login({ email: "a@b.c", password: "x" }, { remember: true });
+
+  assert.equal(tab.getItem(), null);
+  assert.ok(keep.getItem());
+});

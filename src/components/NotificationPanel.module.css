@@ -24,6 +24,6 @@
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .empty { padding: 32px 16px; background: var(--surface-2); border-radius: var(--radius); color: var(--ink-3); text-align: center; line-height: 1.8; }
-.error { color: #a12c1e; padding: 12px; margin-bottom: 12px; background: #fff0eb; border-radius: 10px; line-height: 1.6; font-size: 14px; }
-.error button { display: block; margin-top: 8px; padding: 7px 12px; background: white; border: 1px solid var(--line-strong); border-radius: 8px; }
+.error { color: var(--danger); padding: var(--s3); margin-bottom: var(--s3); background: var(--danger-bg); border-radius: 10px; line-height: 1.6; font-size: 14px; }
+.error button { display: block; margin-top: 8px; padding: 7px 12px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; }
 .more { width: 100%; margin-top: 12px; padding: 11px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius); font-weight: 600; color: var(--ink-2); }

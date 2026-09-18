@@ -33,7 +33,7 @@
 }
 .product:disabled { cursor: default; opacity: 1; }
 .thumb { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
-  background-image: repeating-linear-gradient(135deg, #efe9e3 0 6px, #e5ddd5 6px 12px); }
+  background: var(--surface-2); }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .productBody { display: grid; gap: 2px; min-width: 0; }
 .productTitle { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -58,7 +58,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.mine .bubble { background: var(--accent); color: white; border-radius: 16px 16px 4px 16px; }
+.mine .bubble { background: var(--accent); color: var(--on-accent); border-radius: 16px 16px 4px 16px; }
 .meta { display: grid; justify-items: start; gap: 1px; font-size: 11px; color: var(--ink-4); flex-shrink: 0; }
 .mine .meta { justify-items: end; }
 .read { color: var(--accent); font-weight: 600; }
@@ -77,17 +77,17 @@
   font: inherit;
   font-size: 15px;
   color: var(--ink);
-  background: white;
+  background: var(--field);
 }
 .inputRow textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-.send { border: none; border-radius: 12px; background: var(--accent); color: white; font-weight: 700; padding: 11px 16px; flex-shrink: 0; }
+.send { border: none; border-radius: 12px; background: var(--accent); color: var(--on-accent); font-weight: 700; padding: 11px 16px; flex-shrink: 0; }
 .send:disabled { cursor: default; }
-.sendError { color: #a12c1e; background: #fff0eb; border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
+.sendError { color: var(--danger); background: var(--danger-bg); border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
 .count { text-align: right; font-size: 12px; color: var(--ink-4); margin-top: 4px; }
 
-.error { color: #a12c1e; padding: 14px; margin: 12px; background: #fff0eb; border-radius: 10px; line-height: 1.6; }
+.error { color: var(--danger); padding: 14px; margin: 12px; background: var(--danger-bg); border-radius: 10px; line-height: 1.6; }
 .errorActions { display: flex; gap: 8px; margin-top: 10px; }
-.errorActions button { padding: 8px 12px; background: white; border: 1px solid var(--line-strong); border-radius: 8px; }
+.errorActions button { padding: 8px 12px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; }
 
 @media (min-width: 880px) {
   .room { height: calc(100dvh - 220px); min-height: 420px; }
@@ -108,9 +108,9 @@
 .tradeStatus { font-size: 14px; font-weight: 700; color: var(--accent); }
 .tradeButtons { display: flex; gap: 6px; flex-wrap: wrap; }
 .tradePrimary, .tradeSecondary { border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 700; }
-.tradePrimary { border: none; background: var(--accent); color: white; }
+.tradePrimary { border: none; background: var(--accent); color: var(--on-accent); }
 .tradeSecondary { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-3); }
-.tradeError { flex-basis: 100%; color: #a12c1e; font-size: 13px; line-height: 1.5; }
+.tradeError { flex-basis: 100%; color: var(--danger); font-size: 13px; line-height: 1.5; }
 
 .system {
   align-self: center;

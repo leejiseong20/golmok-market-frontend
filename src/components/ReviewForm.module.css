@@ -2,7 +2,7 @@
 .form p { margin: 0; }
 .form label { display: grid; gap: 8px; font-weight: 600; }
 .field { display: grid; gap: 8px; }
-.form select, .form textarea { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: white; color: var(--ink); font: inherit; }
+.form select, .form textarea { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--field); color: var(--ink); font: inherit; }
 .form textarea { resize: vertical; }
 .hint { font-size: 13px; line-height: 1.6; color: var(--ink-4); }
 .error { color: var(--danger); }

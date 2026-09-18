@@ -1,0 +1,44 @@
+.wrap {
+  position: fixed;
+  left: 50%;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 40;
+  display: grid;
+  gap: var(--s2);
+  width: min(420px, calc(100vw - var(--s8)));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  text-align: left;
+  animation: rise .18s ease-out;
+}
+
+/* 성공·실패는 색이 아니라 왼쪽 띠로 구분한다. 색만 쓰면 구분이 어려운 사람이 있다. */
+.success { border-left: 3px solid var(--success); }
+.error { border-left: 3px solid var(--danger); color: var(--danger); }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+@media (min-width: 880px) {
+  .wrap { bottom: var(--s6); }
+}

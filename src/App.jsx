@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { matchPath, Route, Routes, useLocation, useNavigate, useParams } from "react-router";
 import Header from "./components/Header.jsx";
 import CategoryBar from "./components/CategoryBar.jsx";
@@ -14,6 +14,7 @@ import ChatPage from "./components/ChatPage.jsx";
 import UserProfile from "./components/UserProfile.jsx";
 import NotificationPanel from "./components/NotificationPanel.jsx";
 import NotFound from "./components/NotFound.jsx";
+import Toaster from "./components/Toaster.jsx";
 import PopularKeywords from "./components/PopularKeywords.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import { ProductListSkeleton } from "./components/Skeleton.jsx";
@@ -24,6 +25,8 @@ import { fetchUnreadCount } from "./api/notificationApi.js";
 import { logout } from "./api/authApi.js";
 import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavorite } from "./api/productApi.js";
 import { homeSearch, isAppPath, MY_TABS, parseHomeQuery, parseId, paths } from "./routes.js";
+import { theme } from "./theme.js";
+import { toast } from "./toast.js";
 import styles from "./App.module.css";
 
 function savedRegion() {
@@ -68,6 +71,8 @@ function MyScreen(props) {
  */
 export default function App() {
   const session = useSyncExternalStore(client.subscribe, client.getSession);
+  // 화면 모드. 고른 값이 없으면 시스템 설정을 따르므로 effective() 를 그대로 읽는다.
+  const dark = useSyncExternalStore(theme.subscribe, theme.effective) === "dark";
   const user = session?.user;
   const location = useLocation();
   const navigate = useNavigate();
@@ -94,7 +99,6 @@ export default function App() {
   const [editor, setEditor] = useState(null);
   const [productRevision, setProductRevision] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [accountError, setAccountError] = useState("");
   const feedVersion = useRef(0);
   const moreController = useRef(null);
   const morePending = useRef(false);
@@ -104,6 +108,15 @@ export default function App() {
   // 상세를 받아 둔 사용자. 처음 값을 현재 사용자로 둬야 새로고침 직후(세션 복원)를 "사용자 변경"으로 오인해 상세를 두 번 받지 않는다.
   const detailUserId = useRef(user?.id ?? null);
   const reloadChatUnread = useRef(() => {});
+  /**
+   * 주소별 스크롤 위치. 뒤로가기로 목록에 돌아오면 보던 자리에서 이어 본다.
+   *
+   * 기록 항목(location.key)으로 나누면 더 정확하지만, 이 라우터 설정에서는 key 가 계속 "default" 라
+   * 화면이 바뀐 것을 알아채지 못한다. 같은 주소의 서로 다른 기록 항목은 위치를 공유한다(실용적인 절충).
+   */
+  const scrollPositions = useRef(new Map());
+  const restoreTarget = useRef(0);
+  const pageKey = pageLocation.pathname + pageLocation.search;
   const chatUnreadPath = useRef(location.pathname);
 
   useEffect(() => {
@@ -117,8 +130,46 @@ export default function App() {
   // 뒤로가기로 검색 조건이 바뀌면 입력창도 주소를 따라간다.
   useEffect(() => { setSearch(keyword); }, [keyword]);
 
-  // 다른 페이지로 옮기면 맨 위에서 시작하고, 페이지에 딸린 창은 닫는다. 모달을 열고 닫을 때는 페이지가 그대로라 해당하지 않는다.
-  useEffect(() => { window.scrollTo(0, 0); setModal(null); }, [pageLocation.pathname, pageLocation.search]);
+  /**
+   * 페이지를 옮기면 창을 닫고 스크롤을 옮긴다. 처음 보는 페이지는 맨 위, 뒤로가기로 돌아온 페이지는 보던 자리다.
+   * 모달을 열고 닫을 때는 아래 페이지(pageLocation)가 그대로라 여기 해당하지 않는다.
+   */
+  /**
+   * 뒤로·앞으로는 우리 코드를 거치지 않으므로 popstate 에서 위치를 적는다.
+   * 이 이벤트는 화면이 바뀌기 전에 오기 때문에 잘리지 않은 값을 읽을 수 있다.
+   */
+  useEffect(() => {
+    window.addEventListener("popstate", rememberScroll);
+    return () => window.removeEventListener("popstate", rememberScroll);
+  });
+
+  useEffect(() => {
+    restoreTarget.current = scrollPositions.current.get(pageKey) ?? 0;
+    window.scrollTo(0, restoreTarget.current);
+    if (window.scrollY >= restoreTarget.current) restoreTarget.current = 0;
+    setModal(null);
+
+    // 사용자가 직접 움직였다면 복원은 그만둔다(돌아온 목록이 더 짧을 수도 있다).
+    const cancelRestore = () => { restoreTarget.current = 0; };
+    window.addEventListener("wheel", cancelRestore, { passive: true });
+    window.addEventListener("touchstart", cancelRestore, { passive: true });
+    window.addEventListener("keydown", cancelRestore);
+    return () => {
+      window.removeEventListener("wheel", cancelRestore);
+      window.removeEventListener("touchstart", cancelRestore);
+      window.removeEventListener("keydown", cancelRestore);
+    };
+  }, [pageKey]);
+
+  /**
+   * 돌아온 직후에는 목록이 아직 스켈레톤이라 예전만큼 내려갈 수 없다.
+   * 목록이 채워지면 한 번 더 맞추고, 원하는 위치에 닿으면 그만둔다.
+   */
+  useLayoutEffect(() => {
+    if (!restoreTarget.current) return;
+    window.scrollTo(0, restoreTarget.current);
+    if (window.scrollY >= restoreTarget.current) restoreTarget.current = 0;
+  }, [feed.items.length]);
 
   useEffect(() => {
     if (view !== "home") return undefined;
@@ -269,27 +320,37 @@ export default function App() {
 
   // ---------- 이동 ----------
 
+  /** 지금 보고 있는 기록 항목의 스크롤 위치를 적어 둔다. 화면이 바뀌기 전에 불러야 한다. */
+  function rememberScroll() {
+    scrollPositions.current.set(pageKey, window.scrollY);
+  }
+  /** 이동은 모두 이 함수를 지난다(위치를 적고 옮긴다). 뒤로가기는 popstate 가 맡는다. */
+  function goTo(to, options) {
+    rememberScroll();
+    navigate(to, options);
+  }
+
   /** 페이지 이동. 보고 있는 페이지를 다시 누르면 기록을 쌓지 않고 새로 불러온다. */
   function go(to) {
-    setEditor(null); setModal(null); setAccountError("");
+    setEditor(null); setModal(null);
     const current = pageLocation.pathname + pageLocation.search;
     if (current === to && !location.state?.background) { setRetry((value) => value + 1); return; }
-    navigate(to);
+    goTo(to);
   }
   function openProduct(id, product) {
-    navigate(paths.product(id), { state: { background: pageLocation, product } });
+    goTo(paths.product(id), { state: { background: pageLocation, product } });
   }
   function openProfile(id) {
-    navigate(paths.user(id), { state: { background: pageLocation } });
+    goTo(paths.user(id), { state: { background: pageLocation } });
   }
   /** 모달 닫기. 앱 안에서 열었으면 뒤로가기(아래 화면이 그대로 남는다), 주소로 바로 들어왔으면 홈으로 바꿔치기. */
   function closeModal() {
     if (location.state?.background) navigate(-1);
-    else navigate(paths.home, { replace: true });
+    else goTo(paths.home, { replace: true });
   }
   function changeHomeQuery(changes) {
     setEditor(null);
-    navigate({ pathname: paths.home, search: homeSearch({ keyword, categoryId, sort, ...changes }) });
+    goTo({ pathname: paths.home, search: homeSearch({ keyword, categoryId, sort, ...changes }) });
   }
   function submitSearch(event) {
     event.preventDefault();
@@ -304,7 +365,7 @@ export default function App() {
     const profile = matchPath("/users/:id", targetUrl);
     if (product) openProduct(parseId(product.params.id));
     else if (profile) openProfile(parseId(profile.params.id));
-    else navigate(targetUrl);
+    else goTo(targetUrl);
   }
 
   // ---------- 동작 ----------
@@ -317,7 +378,7 @@ export default function App() {
    * @returns 성공하면 { isLiked, favoriteCount }, 실패·비로그인이면 null
    */
   async function toggleFavorite(product) {
-    if (!user) { setAccountError(""); setModal("auth"); return null; }
+    if (!user) { setModal("auth"); return null; }
     try {
       const result = product.isLiked ? await removeFavorite(product.id) : await addFavorite(product.id);
       const apply = (item) => item.id === product.id
@@ -326,7 +387,7 @@ export default function App() {
       patchDetail((data) => apply(data));
       return result;
     } catch (error) {
-      setAccountError(error.message);
+      toast.error(error.message);
       return null;
     }
   }
@@ -372,23 +433,23 @@ export default function App() {
    * 실패 메시지는 상세 화면이 보여준다.
    */
   async function startChat(product) {
-    if (!user) { setAccountError(""); setModal("auth"); return; }
+    if (!user) { setModal("auth"); return; }
     const room = await openChatRoom(product.id);
-    navigate(paths.chatRoom(room.roomId));
+    goTo(paths.chatRoom(room.roomId));
   }
   async function signOut() {
     if (logoutPending.current) return;
-    logoutPending.current = true; setLoggingOut(true); setAccountError("");
-    try { await logout(); } catch (error) { setAccountError(error.message); }
+    logoutPending.current = true; setLoggingOut(true);
+    try { await logout(); toast.show("로그아웃했어요."); } catch (error) { toast.error(error.message); }
     finally { logoutPending.current = false; setLoggingOut(false); }
   }
-  const login = () => { setAccountError(""); setModal("auth"); };
+  const login = () => setModal("auth");
   const goHome = () => go(paths.home);
   const navigation = { user, view, loggingOut, chatUnreadCount, onLogin: login, onLogout: signOut,
     onHome: goHome, onMyPage: () => go(paths.my()), onChat: () => go(paths.chat),
     onRegionClick: () => setModal("region") };
   const categoryBar = <CategoryBar categories={categories} value={categoryId} onChange={(value) => changeHomeQuery({ categoryId: value })} />;
-  const selectRoom = (id, options) => navigate(id ? paths.chatRoom(id) : paths.chat, options);
+  const selectRoom = (id, options) => goTo(id ? paths.chatRoom(id) : paths.chat, options);
 
   /** 상세 안에서 상태 변경·끌어올리기를 했다. 같은 상세에 머물며 목록만 새로 받는다. */
   function detailChanged(product) {
@@ -408,9 +469,8 @@ export default function App() {
     setEditor({ product: null });
   }
 
-  const homePage = <main className={styles.shell}>
+  const homePage = <main className={styles.shell} id="main" tabIndex={-1}>
     <section aria-label="상품 목록">
-      {accountError && <p className={styles.error} role="alert">{accountError}</p>}
       {categoryError && <div className={styles.error} role="alert">{categoryError}<button className="btn btn-outline btn-sm" onClick={() => setCategoryRetry((value) => value + 1)}>카테고리 다시 시도</button></div>}
       <div className={styles.feedHead}>
         <div>
@@ -437,14 +497,16 @@ export default function App() {
   </main>;
   const chatScreen = <ChatScreen user={user} onHome={goHome} onLogin={login} onSelectRoom={selectRoom}
     onOpenProduct={openProduct} onOpenProfile={openProfile} />;
-  const myScreen = <MyScreen user={user} onHome={goHome} onTabChange={(tab) => navigate(paths.my(tab))}
+  const myScreen = <MyScreen user={user} onHome={goHome} onTabChange={(tab) => goTo(paths.my(tab))}
     onLogout={signOut} loggingOut={loggingOut}
     refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite}
     onRegionsChange={applyPrimaryRegion} onLogin={login} />;
 
   return <>
+    <a className="skip-link btn btn-primary btn-sm" href="#main">본문 바로가기</a>
     <Header {...navigation} region={region} search={search} onSearchChange={setSearch} onSearch={submitSearch}
-      unreadCount={unreadCount} onNotifications={() => { setAccountError(""); setModal("notifications"); }}>
+      unreadCount={unreadCount} onNotifications={() => setModal("notifications")}
+      dark={dark} onToggleTheme={theme.toggle}>
       {categoryBar}
     </Header>
     {view === "home" && <div className={styles.mobileOnly}>{categoryBar}
@@ -470,6 +532,7 @@ export default function App() {
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
     {modal === "notifications" && user && <NotificationPanel onClose={() => setModal(null)} onNavigate={openNotificationTarget}
       onRead={() => setUnreadCount((value) => Math.max(0, value - 1))} onAllRead={() => setUnreadCount(0)} />}
+    <Toaster />
     {detail && <ProductDetail key={detail.key} detail={detail} onClose={closeModal}
       onRetry={() => setDetailRetry((value) => value + 1)}
       onEdit={(product) => { setEditor({ product }); closeModal(); }} onChanged={detailChanged} onStartChat={startChat}

@@ -2,11 +2,11 @@
 .lead { font-size: 14px; line-height: 1.6; color: var(--ink-2); }
 .list { display: grid; gap: 6px; margin: 0; padding: 12px 14px 12px 30px; border-radius: 10px; background: var(--surface-2); font-size: 14px; line-height: 1.55; color: var(--ink-2); }
 .field { display: grid; gap: 7px; font-size: 14px; font-weight: 600; }
-.field input { width: 100%; min-width: 0; border: 1px solid var(--line-strong); border-radius: 10px; background: white; padding: 12px; font: inherit; color: var(--ink); }
-.field input[aria-invalid="true"] { border-color: #a12c1e; }
+.field input { width: 100%; min-width: 0; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--field); padding: var(--s3); font: inherit; color: var(--ink); }
+.field input[aria-invalid="true"] { border-color: var(--danger); }
 .fieldError { font-size: var(--fs-sm); font-weight: 400; color: var(--danger); }
 .agree { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.5; color: var(--ink-2); }
-.agree input { margin-top: 3px; accent-color: #a12c1e; }
+.agree input { margin-top: 3px; accent-color: var(--danger); }
 .error { color: var(--danger); background: var(--danger-bg); border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.6; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .secondary { composes: btn btn-outline btn-lg from global; }

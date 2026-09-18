@@ -10,6 +10,7 @@ import WithdrawForm from "./WithdrawForm.jsx";
 import EmptyState from "./EmptyState.jsx";
 import { BlockListSkeleton, ProductListSkeleton } from "./Skeleton.jsx";
 import { client } from "../api/client.js";
+import { toast } from "../toast.js";
 import { fetchMe, fetchMyFavorites } from "../api/userApi.js";
 import { confirmPurchase, fetchMyPurchases } from "../api/tradeApi.js";
 import { fetchMyProducts } from "../api/productApi.js";
@@ -122,7 +123,7 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
   }
 
   if (!user) {
-    return <main className={styles.shell}>
+    return <main className={styles.shell} id="main" tabIndex={-1}>
       <section className={styles.guest}>
         <h1 className={styles.title}>나의 골목</h1>
         <p className={styles.sub}>로그인하면 찜한 상품과 구매내역을 볼 수 있어요.</p>
@@ -131,7 +132,7 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
     </main>;
   }
 
-  return <main className={styles.shell}>
+  return <main className={styles.shell} id="main" tabIndex={-1}>
     <section aria-label="내 정보" className={styles.profile}>
       <Avatar url={profile?.profileImageUrl} name={profile?.nickname ?? user.nickname} size={52} />
       <div className={styles.profileBody}>
@@ -197,12 +198,14 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
       // 서버가 refresh token 을 모두 지웠으므로 이 기기의 세션만 지우면 된다. 홈으로 먼저 옮겨 빈 마이페이지를 거치지 않는다.
       onHome();
       client.clearSession();
+      toast.show("탈퇴가 완료됐어요. 그동안 이용해 주셔서 고맙습니다.");
     }} />}
     {editingProfile && profile && <ProfileForm profile={profile} onClose={() => setEditingProfile(false)}
       onSaved={(updated) => {
         // 응답이 갱신된 내 정보라 다시 조회하지 않는다. 헤더 닉네임은 저장된 세션에서 읽으므로 세션도 바꾼다.
         setProfile(updated); setEditingProfile(false);
         client.updateUser(user.id, { nickname: updated.nickname });
+        toast.success("프로필을 저장했어요.");
       }} />}
     {review && <ReviewForm tradeId={review.tradeId} nickname={review.seller.nickname}
       onClose={() => setReview(null)} onSaved={() => { setReview(null); setRetry((n) => n + 1); }} />}

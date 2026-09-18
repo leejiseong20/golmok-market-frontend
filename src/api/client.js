@@ -8,22 +8,41 @@ export class ApiError extends Error {
   }
 }
 
-// 의존성을 주입해 실제 토큰 없이 동시 재발급·네트워크 실패를 테스트한다.
-export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fetch(...args), storage } = {}) {
+/**
+ * 의존성을 주입해 실제 토큰 없이 동시 재발급·네트워크 실패를 테스트한다.
+ *
+ * 저장소가 둘이다. storage 는 탭을 닫으면 사라지고(sessionStorage),
+ * persistentStorage 는 남는다(localStorage). 로그인할 때 "로그인 상태 유지"로 어디에 둘지 고른다.
+ * 세션은 언제나 한 곳에만 있다(고른 쪽에 쓰고 다른 쪽은 지운다).
+ */
+export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fetch(...args), storage, persistentStorage } = {}) {
   const listeners = new Set();
   let session = null;
   let generation = 0;
   let refreshFlight = null;
-  try {
-    const saved = JSON.parse(storage?.getItem(SESSION_KEY) ?? "null");
-    if (saved?.accessToken && saved?.refreshToken && saved?.user?.id && saved?.user?.nickname) session = saved;
-  } catch { /* 저장소 차단·잘못된 JSON이면 비로그인으로 시작한다. */ }
+
+  function read(from) {
+    try {
+      const saved = JSON.parse(from?.getItem(SESSION_KEY) ?? "null");
+      return saved?.accessToken && saved?.refreshToken && saved?.user?.id && saved?.user?.nickname ? saved : null;
+    } catch {
+      return null; // 저장소 차단·잘못된 JSON이면 비로그인으로 시작한다.
+    }
+  }
+
+  // 유지해 둔 로그인을 먼저 본다. 이후 토큰 재발급도 처음 복원한 저장소에 이어서 쓴다.
+  const kept = read(persistentStorage);
+  let activeStorage = kept ? persistentStorage : storage;
+  session = kept ?? read(storage);
 
   function publish(value) {
     session = value;
     try {
-      if (value) storage?.setItem(SESSION_KEY, JSON.stringify(value));
-      else storage?.removeItem(SESSION_KEY);
+      if (value) activeStorage?.setItem(SESSION_KEY, JSON.stringify(value));
+      else activeStorage?.removeItem(SESSION_KEY);
+      // 쓰지 않는 쪽에 옛 세션이 남아 있으면 다음 방문에 되살아난다.
+      const other = activeStorage === persistentStorage ? storage : persistentStorage;
+      other?.removeItem(SESSION_KEY);
     } catch { /* 저장이 막혀도 현재 탭 메모리에서 로그인은 유지한다. */ }
     listeners.forEach((listener) => listener());
   }
@@ -120,11 +139,13 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
       if (!session || session.user.id !== userId) return;
       publish({ ...session, user: { ...session.user, ...changes } });
     },
-    async login(credentials) {
+    /** remember 가 true 면 탭을 닫아도 로그인이 유지된다(공용 PC 에서는 끈다). */
+    async login(credentials, { remember = false } = {}) {
       const started = generation;
       const result = await send("/auth/login", { method: "POST", body: credentials });
       if (generation !== started) throw new ApiError("로그인 상태가 변경됐습니다.", { code: "SESSION_CHANGED" });
       generation++;
+      activeStorage = remember && persistentStorage ? persistentStorage : storage;
       publish(result);
       return result;
     },
@@ -141,5 +162,11 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
 }
 
 let tabStorage;
+let keepStorage;
 try { tabStorage = globalThis.sessionStorage; } catch { /* 비공개 모드 등 */ }
-export const client = createApiClient({ baseUrl: import.meta.env?.VITE_API_BASE || "/api", storage: tabStorage });
+try { keepStorage = globalThis.localStorage; } catch { /* 비공개 모드 등 */ }
+export const client = createApiClient({
+  baseUrl: import.meta.env?.VITE_API_BASE || "/api",
+  storage: tabStorage,
+  persistentStorage: keepStorage,
+});

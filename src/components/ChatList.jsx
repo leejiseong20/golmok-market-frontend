@@ -4,6 +4,7 @@ import { chatSocket } from "../api/chatSocket.js";
 import Avatar from "./Avatar.jsx";
 import { relativeTime, statusLabel } from "../data/format.js";
 import EmptyState from "./EmptyState.jsx";
+import { thumbnailUrl } from "../api/imageUrl.js";
 import { ChatListSkeleton } from "./Skeleton.jsx";
 import styles from "./ChatList.module.css";
 
@@ -103,7 +104,7 @@ export default function ChatList({ me, selectedId, onSelect }) {
           onClick={() => onSelect(room.roomId)}>
           <span className={styles.thumb}>
             {room.product.thumbnailUrl && !failedImages.has(room.roomId)
-              ? <img src={room.product.thumbnailUrl} alt="" loading="lazy"
+              ? <img src={thumbnailUrl(room.product.thumbnailUrl)} alt="" loading="lazy"
                   onError={() => setFailedImages((old) => new Set(old).add(room.roomId))} />
               : null}
           </span>

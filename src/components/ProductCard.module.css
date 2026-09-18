@@ -37,7 +37,7 @@
   height: 32px;
   border: none;
   border-radius: var(--radius-pill);
-  background: #fffdfbe6;
+  background: var(--surface-veil);
   box-shadow: var(--shadow-1);
   display: grid;
   place-items: center;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { thumbnailUrl } from "../api/imageUrl.js";
 import styles from "./Avatar.module.css";
 
 /**
@@ -14,7 +15,8 @@ export default function Avatar({ url, name, size = 40 }) {
   return <span className={styles.avatar} aria-hidden="true"
     style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}>
     {showImage
-      ? <img src={url} alt="" loading="lazy" onError={() => setFailedUrl(url)} />
+      // 프로필 사진도 화면에서는 72px 이하라 축소본으로 충분하다.
+      ? <img src={thumbnailUrl(url)} alt="" loading="lazy" onError={() => setFailedUrl(url)} />
       : (name ?? "").slice(0, 1)}
   </span>;
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { formatPrice, relativeTime, statusLabel } from "../data/format.js";
 import Icon from "./Icon.jsx";
+import { thumbnailUrl } from "../api/imageUrl.js";
 import styles from "./ProductCard.module.css";
 
 /**
@@ -30,11 +31,11 @@ export default function ProductCard({ product, onOpen, onToggleFavorite }) {
     <button className={styles.card} onClick={onOpen} aria-label={product.title + " 상세 보기"}>
       <div className={styles.media}>
         {product.thumbnailUrl && !failed
-          ? <img src={product.thumbnailUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
+          ? <img src={thumbnailUrl(product.thumbnailUrl)} alt="" loading="lazy" onError={() => setFailed(true)} />
           : <span className={styles.slot}>사진 없음</span>}
       </div>
       <div className={styles.body}>
-        <h3 className={styles.title}>{product.title}</h3><p className={styles.price}>{formatPrice(product.price)}</p>
+        <h2 className={styles.title}>{product.title}</h2><p className={styles.price}>{formatPrice(product.price)}</p>
         {/* 판매중은 기본 상태라 표시하지 않는다. 예약중·판매완료만 눈에 띄면 된다. */}
         <p className={styles.meta}>
           {product.status !== "ON_SALE" && <span className={styles.badge}>{statusLabel(product.status)}</span>}

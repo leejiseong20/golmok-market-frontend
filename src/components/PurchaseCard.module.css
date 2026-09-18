@@ -19,14 +19,14 @@
   letter-spacing: -0.01em;
   padding: 3px 10px;
   border-radius: 999px;
-  background: #f1ece7;
+  background: var(--surface-2);
   color: var(--ink-4);
 }
 
 /* 진행 중인 거래만 강조한다. 끝난 거래까지 색이 들어오면 무엇을 봐야 할지 흐려진다. */
-.paid, .shipping { background: #fdece7; color: var(--accent); }
-.confirmed { background: #e8f3ec; color: #2c6b45; }
-.canceled, .refunded { background: #f1ece7; color: var(--ink-4); }
+.paid, .shipping { background: var(--accent-soft); color: var(--accent); }
+.confirmed { background: var(--success-bg); color: var(--success); }
+.canceled, .refunded { background: var(--surface-2); color: var(--ink-4); }
 
 .date { font-size: 13px; color: var(--ink-4); }
 
@@ -62,7 +62,7 @@
 .slot {
   font-size: 10px;
   color: var(--ink-4);
-  background: #fffdfbdd;
+  background: var(--surface-veil);
   border-radius: 5px;
   padding: 2px 5px;
 }
@@ -78,7 +78,7 @@
   border: none;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   padding: 9px 18px;
   font-size: 14px;
   font-weight: 600;

@@ -1,4 +1,5 @@
 import NotificationBell from "./NotificationBell.jsx";
+import Icon from "./Icon.jsx";
 import styles from "./Header.module.css";
 
 /**
@@ -8,7 +9,7 @@ import styles from "./Header.module.css";
  * 좁은 화면에서 헤더가 두 줄이 되고 같은 동작이 두 번 보였다.
  * 알림은 하단 탭에 자리가 없어 모바일에서도 헤더에 남긴다.
  */
-export default function Header({ region, onRegionClick, user, onLogin, onLogout, loggingOut, search, onSearchChange, onSearch, onHome, onMyPage, onChat, unreadCount = 0, chatUnreadCount = 0, onNotifications, children }) {
+export default function Header({ region, onRegionClick, user, onLogin, onLogout, loggingOut, search, onSearchChange, onSearch, onHome, onMyPage, onChat, unreadCount = 0, chatUnreadCount = 0, onNotifications, dark, onToggleTheme, children }) {
   return <header className={styles.header}>
     <div className={styles.inner}>
       <button className={styles.logo} onClick={onHome} aria-label="골목마켓 홈"><span className={styles.mark} /><span className={styles.wordmark}>골목마켓</span></button>
@@ -19,6 +20,11 @@ export default function Header({ region, onRegionClick, user, onLogin, onLogout,
       </form>
       <div className={styles.account}>
         {user && <span className={styles.nickname}>{user.nickname}님</span>}
+        {/* 로그인 여부와 상관없는 화면 설정이라 계정 버튼들보다 앞에 두고 모바일에서도 남긴다. */}
+        <button type="button" className={styles.theme} onClick={onToggleTheme}
+          aria-label={dark ? "밝은 화면으로 바꾸기" : "어두운 화면으로 바꾸기"}>
+          <Icon name={dark ? "sun" : "moon"} size={18} />
+        </button>
         {user && <NotificationBell count={unreadCount} onClick={onNotifications} />}
         <button className={"btn btn-ghost btn-sm " + styles.chat + " " + styles.pcOnly} onClick={onChat}
           aria-label={chatUnreadCount > 0 ? `채팅, 안 읽은 메시지 ${chatUnreadCount}개` : undefined}>채팅

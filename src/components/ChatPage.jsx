@@ -13,7 +13,7 @@ export default function ChatPage({ user, roomId = null, onSelectRoom, onLogin, o
   const [listRevision, setListRevision] = useState(0);
 
   if (!user) {
-    return <main className={styles.shell + " " + styles.single}>
+    return <main className={styles.shell + " " + styles.single} id="main" tabIndex={-1}>
       <section className={styles.guest}>
         <h1 className={styles.title}>채팅</h1>
         <p className={styles.sub}>로그인하면 이웃과 나눈 대화를 볼 수 있어요.</p>
@@ -22,7 +22,7 @@ export default function ChatPage({ user, roomId = null, onSelectRoom, onLogin, o
     </main>;
   }
 
-  return <main className={styles.shell + (roomId ? " " + styles.roomOpen : "")}>
+  return <main className={styles.shell + (roomId ? " " + styles.roomOpen : "")} id="main" tabIndex={-1}>
     <section className={styles.listPane} aria-label="채팅 목록">
       <h1 className={styles.title}>채팅</h1>
       <ChatList key={listRevision} me={user.id} selectedId={roomId} onSelect={onSelectRoom} />

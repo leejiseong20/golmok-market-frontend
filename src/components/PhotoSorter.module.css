@@ -1,0 +1,91 @@
+/* 가로 한 줄. 사진이 늘어도 아래로 길어지지 않고 옆으로 넘긴다. */
+.row {
+  display: flex;
+  gap: var(--s3);
+  margin: 0;
+  padding: 0 0 var(--s2);
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  /* 세로 스크롤은 페이지에 넘기고, 가로 넘기기만 이 줄이 받는다. */
+  touch-action: pan-y;
+  /* 끌 때 사진과 주변 글자가 파랗게 선택되지 않게 한다. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cell { position: relative; flex: 0 0 120px; }
+
+/* 끌고 있는 칸은 다른 사진 위로 올라온다(자리를 비켜 준 사진에 가리지 않는다). */
+.lifted { z-index: 2; }
+
+.photo {
+  position: relative;
+  display: block;
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+  cursor: grab;
+  touch-action: pan-x;
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  /* 브라우저 기본 이미지 끌기(반투명 유령 이미지)를 끈다. 우리가 직접 옮긴다. */
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/**
+ * 끌고 있는 사진. 위치는 자바스크립트가 포인터를 따라 transform 으로 직접 준다.
+ * 그래서 여기서는 transform 을 건드리지 않고(덮어쓰면 따라오지 않는다) 들린 느낌만 더한다.
+ */
+.dragging {
+  cursor: grabbing;
+  box-shadow: var(--shadow-2);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  opacity: .92;
+  touch-action: none;
+}
+
+.badge {
+  position: absolute;
+  left: var(--s2);
+  bottom: var(--s2);
+  padding: 2px var(--s2);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+}
+
+.remove {
+  position: absolute;
+  top: calc(var(--s2) * -0.5);
+  right: calc(var(--s2) * -0.5);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-size: var(--fs-lg);
+  line-height: 1;
+  box-shadow: var(--shadow-1);
+}
+
+.remove:hover { color: var(--danger); border-color: var(--danger); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dragging { transform: none; }
+}

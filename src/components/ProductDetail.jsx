@@ -3,11 +3,14 @@ import { bumpProduct, changeProductStatus, deleteProduct } from "../api/productA
 import { formatDate, formatPrice, statusLabel } from "../data/format.js";
 import Avatar from "./Avatar.jsx";
 import Icon from "./Icon.jsx";
+import Lightbox from "./Lightbox.jsx";
 import Modal from "./Modal.jsx";
+import { toast } from "../toast.js";
 import styles from "./Modal.module.css";
 
 export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChanged, onDeleted, onStartChat, onOpenProfile, onToggleFavorite }) {
   const [index, setIndex] = useState(0);
+  const [zoomed, setZoomed] = useState(false);
   const [failedImage, setFailedImage] = useState(null);
   /**
    * 지금 진행 중인 동작("chat" · "favorite" · "manage").
@@ -16,7 +19,6 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
    */
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const busy = useRef(false);
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
@@ -25,15 +27,15 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
   async function act(kind, status) {
     if (busy.current) return;
     if (kind === "delete" && !window.confirm("상품을 삭제할까요? 삭제한 상품은 목록에서 사라집니다.")) return;
-    busy.current = true; setPending("manage"); setError(""); setNotice("");
+    busy.current = true; setPending("manage"); setError("");
     try {
       if (kind === "delete") { await deleteProduct(product.id); if (alive.current) onDeleted(product.id); }
       else if (kind === "status") {
         const updated = await changeProductStatus(product.id, status);
-        if (alive.current) { onChanged(updated); setNotice("상품 상태를 변경했어요."); }
+        if (alive.current) { onChanged(updated); toast.success("상품 상태를 변경했어요."); }
       } else {
         await bumpProduct(product.id);
-        if (alive.current) { onChanged(product); setNotice("상품을 끌어올렸어요."); }
+        if (alive.current) { onChanged(product); toast.success("상품을 끌어올렸어요."); }
       }
     } catch (e) { if (alive.current) setError(e.message); }
     finally { busy.current = false; if (alive.current) setPending(""); }
@@ -64,9 +66,11 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
     {detail.error && <><p className={styles.error} role="alert">{detail.error}</p>
       <div className={styles.actions}><button className={styles.secondary} onClick={onRetry}>다시 시도</button></div></>}
     {product && <>
-      <div className={styles.gallery}>{image && failedImage !== image.id
-        ? <img src={image.imageUrl} alt={`${product.title} 사진 ${index + 1}`} onError={() => setFailedImage(image.id)} />
-        : <span>사진을 표시할 수 없습니다</span>}</div>
+      {image && failedImage !== image.id
+        ? <button type="button" className={styles.gallery} onClick={() => setZoomed(true)} aria-label="사진 크게 보기">
+            <img src={image.imageUrl} alt={`${product.title} 사진 ${index + 1}`} onError={() => setFailedImage(image.id)} />
+          </button>
+        : <div className={styles.gallery}><span>사진을 표시할 수 없습니다</span></div>}
       {product.images.length > 1 && <div className={styles.pager}>
         <button className={styles.secondary} onClick={() => setIndex(index - 1)} disabled={index === 0} aria-label="이전 사진">←</button>
         <span>{index + 1} / {product.images.length}</span>
@@ -103,7 +107,6 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
       {product.isMine && <p className={styles.note}>관심 {product.favoriteCount}</p>}
       {product.isMine && <section aria-label="내 상품 관리">
         {error && <p className={styles.error} role="alert">{error}</p>}
-        {notice && <p className={styles.success} role="status">{notice}</p>}
         <div className={styles.actions}>
           {product.status !== "SOLD" && <>
             <button className={styles.secondary} disabled={pending !== ""} onClick={() => onEdit(product)}>수정하기</button>
@@ -117,6 +120,8 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
         </div>
         {product.status !== "SOLD" && <p className={styles.note}>끌어올리기는 등록 또는 마지막 끌어올리기 후 24시간마다 가능해요.</p>}
       </section>}
+      {zoomed && image && <Lightbox images={product.images} index={index} title={product.title}
+        onMove={setIndex} onClose={() => setZoomed(false)} />}
     </>}
   </Modal>;
 }

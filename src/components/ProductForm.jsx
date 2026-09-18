@@ -4,6 +4,7 @@ import { fetchMe } from "../api/userApi.js";
 import { createProduct, updateProduct } from "../api/productApi.js";
 import { uploadImages } from "../api/imageApi.js";
 import Icon from "./Icon.jsx";
+import PhotoSorter from "./PhotoSorter.jsx";
 import styles from "./ProductForm.module.css";
 
 export default function ProductForm({ product, categories, onClose, onSaved, onVerifyRegion }) {
@@ -41,9 +42,6 @@ export default function ProductForm({ product, categories, onClose, onSaved, onV
 
   const set = (key) => (event) => setForm((old) => ({ ...old, [key]: event.target.value }));
   const external = photos.some((url) => !url.startsWith("/api/images/"));
-  function move(index, offset) {
-    setPhotos((old) => { const next = [...old]; [next[index], next[index + offset]] = [next[index + offset], next[index]]; return next; });
-  }
   async function upload(event) {
     const files = [...event.target.files]; event.target.value = "";
     if (!files.length || pending.current) return;
@@ -94,15 +92,15 @@ export default function ProductForm({ product, categories, onClose, onSaved, onV
         <label>거래 방식<select value={form.tradeType} onChange={set("tradeType")}><option value="DIRECT">직거래</option><option value="DELIVERY">택배거래</option></select></label>
         <label className={styles.check}><input type="checkbox" checked={form.isNegotiable} onChange={(e) => setForm((old) => ({ ...old, isNegotiable: e.target.checked }))} />가격 제안 가능</label>
         <p className={styles.label} id="product-photos">사진</p>
-        <p className={styles.note}>JPG·PNG·WEBP, 장당 5MB까지. 첫 번째 사진이 대표 사진이에요.</p>
+        <p className={styles.note}>JPG·PNG·WEBP, 장당 5MB까지. 끌어서 순서를 바꿀 수 있고 맨 앞이 대표 사진이에요.</p>
         {external && <p className={styles.error}>기존 외부 사진은 수정 시 사용할 수 없어요. 삭제한 뒤 새 사진을 올려 주세요.</p>}
-        <ol className={styles.photos} aria-labelledby="product-photos">
         {/*
           기본 <input type="file"> 의 "파일 선택" 버튼은 브라우저마다 생김새가 다르고 화면과 따로 논다.
           입력칸은 라벨 안에 숨기고, 카메라 타일을 눌러 열게 한다(라벨을 누르면 숨긴 입력이 열린다).
           장수는 타일 안에 두어 몇 장 더 올릴 수 있는지 사진 옆에서 바로 보인다.
         */}
-        <li>
+        <PhotoSorter photos={photos} onReorder={setPhotos}
+          onRemove={(index) => setPhotos((old) => old.filter((_, i) => i !== index))}>
           <label className={styles.picker + (photos.length >= 10 ? " " + styles.pickerFull : "")}>
             <Icon name="camera" size={26} />
             <span className={styles.pickerCount}>{photos.length}/10</span>
@@ -110,13 +108,7 @@ export default function ProductForm({ product, categories, onClose, onSaved, onV
             <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={upload}
               disabled={photos.length >= 10 || busy === "upload"} />
           </label>
-        </li>
-        {photos.map((url, index) => <li key={`${index}-${url}`}>
-          <img src={url} alt={`상품 사진 ${index + 1}`} />
-          <div><button type="button" disabled={index === 0} onClick={() => move(index, -1)} aria-label={`사진 ${index + 1} 앞으로`}>←</button>
-            <button type="button" disabled={index === photos.length - 1} onClick={() => move(index, 1)} aria-label={`사진 ${index + 1} 뒤로`}>→</button>
-            <button type="button" onClick={() => setPhotos((old) => old.filter((_, i) => i !== index))} aria-label={`사진 ${index + 1} 삭제`}>삭제</button></div>
-        </li>)}</ol>
+        </PhotoSorter>
       </fieldset>
       {error && <div className={styles.error} role="alert">{error}
         {errors.length > 0 && <ul>{errors.map((item, i) => <li key={i}>{item.field}: {item.reason}</li>)}</ul>}</div>}

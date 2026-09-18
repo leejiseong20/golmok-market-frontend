@@ -25,7 +25,17 @@
   /* 상태색. 그동안 #a12c1e·#fff0eb 를 여섯 파일에 직접 적어 두고 있었다. */
   --danger: #a12c1e;
   --danger-bg: #fff0eb;
-  --success: #2f6350;
+  --success: #256642;
+  --success-bg: #eef7f0;
+
+  /* 면·글자 이외의 쓰임. 어두운 화면에서 흰색을 그대로 쓰면 눈이 부시거나 대비가 뒤집힌다. */
+  --on-accent: #ffffff;
+  --on-danger: #ffffff;
+  --field: #ffffff;
+  --overlay: #17140f88;
+  --surface-blur: #fffdfbf2;
+  --surface-veil: #fffdfbe6;
+  --shimmer: #ffffffb3;
 
   /* 4px 배수 간격. 값 사이를 건너뛰지 않는다. */
   --s1: 4px;
@@ -60,6 +70,88 @@
 
   --shell-max: 1180px;
   --bp-pc: 880px;
+}
+
+/**
+ * 어두운 화면.
+ *
+ * 색 토큰만 다시 정의하고 컴포넌트 CSS 는 건드리지 않는다. 그래서 모든 색이 토큰이어야 한다.
+ * data-theme 이 붙어 있으면 사용자가 고른 것이고, 없으면 시스템 설정을 따른다.
+ * 따뜻한 회색을 유지해 밝은 화면과 같은 인상을 준다(검정으로 떨어뜨리지 않는다).
+ */
+:root[data-theme="dark"] {
+  --accent: #dd5c37;
+  --accent-strong: #ea6f4b;
+  --accent-soft: #dd5c3726;
+  --accent-border: #dd5c3759;
+
+  --bg: #151210;
+  --surface: #1e1a16;
+  --surface-2: #272219;
+  --line: #322c25;
+  --line-strong: #463f35;
+
+  --ink: #f5f1ea;
+  --ink-2: #ddd6cb;
+  --ink-3: #bcb3a6;
+  --ink-4: #9d9488;
+
+  --danger: #ff8f78;
+  --danger-bg: #3a1c17;
+  --success: #8fc6ad;
+  --success-bg: #172a23;
+
+  --on-accent: #ffffff;
+  --on-danger: #2a1410;
+  --field: #221e19;
+  --overlay: #000000b3;
+  --surface-blur: #1e1a16f2;
+  --surface-veil: #1e1a16e6;
+  --shimmer: #ffffff14;
+
+  --shadow-1: 0 1px 2px #00000059;
+  --shadow-2: 0 8px 24px #00000080;
+
+  color-scheme: dark;
+}
+
+/* 아직 고르지 않았으면 시스템 설정을 따른다. 사용자가 고른 밝은 화면은 시스템보다 우선한다. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent: #dd5c37;
+    --accent-strong: #ea6f4b;
+    --accent-soft: #dd5c3726;
+    --accent-border: #dd5c3759;
+
+    --bg: #151210;
+    --surface: #1e1a16;
+    --surface-2: #272219;
+    --line: #322c25;
+    --line-strong: #463f35;
+
+    --ink: #f5f1ea;
+    --ink-2: #ddd6cb;
+    --ink-3: #bcb3a6;
+    --ink-4: #9d9488;
+
+    --danger: #ff8f78;
+    --danger-bg: #3a1c17;
+    --success: #8fc6ad;
+    --success-bg: #172a23;
+
+    --on-accent: #ffffff;
+    --on-danger: #2a1410;
+    --field: #221e19;
+    --overlay: #000000b3;
+    --surface-blur: #1e1a16f2;
+    --surface-veil: #1e1a16e6;
+    --shimmer: #ffffff14;
+
+    --shadow-1: 0 1px 2px #00000059;
+    --shadow-2: 0 8px 24px #00000080;
+
+    color-scheme: dark;
+  }
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -105,7 +197,7 @@ h1, h2, h3, p, ul { margin: 0; }
   transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
 
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
 .btn-primary:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); }
 
 .btn-outline { background: var(--surface); border-color: var(--line-strong); }
@@ -114,12 +206,26 @@ h1, h2, h3, p, ul { margin: 0; }
 .btn-ghost { color: var(--ink-3); }
 .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
 
-.btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 700; }
+.btn-danger { background: var(--danger); border-color: var(--danger); color: var(--on-danger); font-weight: 700; }
 .btn-danger:hover:not(:disabled) { filter: brightness(1.08); }
 
 .btn-sm { min-height: var(--control-sm); padding: 0 var(--s3); font-size: var(--fs-sm); }
 .btn-lg { min-height: 48px; padding: 0 var(--s5); font-size: var(--fs-lg); }
 .btn-block { width: 100%; }
+
+/**
+ * 본문 바로가기. 평소에는 화면 밖에 있다가 Tab 을 누르면 왼쪽 위에 나타난다.
+ * 키보드·스크린리더 사용자가 헤더의 버튼들을 건너뛰고 목록으로 갈 수 있다.
+ */
+.skip-link {
+  position: fixed;
+  top: var(--s2);
+  left: var(--s2);
+  z-index: 100;
+  transform: translateY(-200%);
+  transition: transform .15s ease;
+}
+.skip-link:focus { transform: none; }
 
 /* 눈으로만 읽는 아이콘 옆에 붙이는, 보조기기 전용 설명. */
 .sr-only {
