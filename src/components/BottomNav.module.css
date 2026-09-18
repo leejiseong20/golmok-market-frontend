@@ -16,6 +16,9 @@
   box-shadow: var(--shadow-2);
 }
 
+/* 키보드가 올라온 동안에는 하단 탭을 숨긴다. 입력창을 가리고, 어차피 누를 수 없다(viewport.js). */
+:global(:root[data-keyboard="open"]) .nav { display: none; }
+
 .nav {
   position: fixed;
   left: 0;

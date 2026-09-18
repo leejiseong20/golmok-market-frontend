@@ -124,6 +124,8 @@ src/
 - **값은 `index.css` 토큰만 쓴다.** 간격 `--s1`~`--s9`(4px 배수), 글자 `--fs-caption`~`--fs-display`, 높이 `--control`/`--control-sm`, `--radius-*`, `--shadow-*`, 상태색 `--danger`/`--danger-bg`. 컴포넌트 CSS 에 새 px 값을 만들지 않는다.
 - **버튼 모양은 `.btn` 한 곳에서만 정의한다.** 변형은 `btn-primary`/`btn-outline`/`btn-ghost`/`btn-danger`, 크기는 `btn-sm`/`btn-lg`/`btn-block`. 모듈 CSS 에서는 `composes: btn btn-primary from global;` 로 가져다 쓴다(`composes` 는 클래스 하나짜리 선택자에만 쓸 수 있다).
 - **색은 예외 없이 토큰으로 쓴다.** 어두운 화면은 `index.css` 의 색 토큰만 다시 정의해서 만든다. 컴포넌트 CSS 에 `#fff`·`white` 같은 값이 하나라도 남아 있으면 그 자리만 밝은 채로 남는다. 강조색 위 글자는 `--on-accent`, 위험 버튼 글자는 `--on-danger`, 입력칸 바탕은 `--field`, 반투명 덮개는 `--overlay`·`--surface-blur`·`--surface-veil` 를 쓴다.
+- **입력칸은 좁은 화면에서 16px 이하로 두지 않는다.** iOS 는 16px 보다 작은 입력칸을 터치하면 화면을 확대하고(끌 수 없다), 확대되면 위쪽이 화면 밖으로 밀려 무엇을 쓰는지 보이지 않는다. `index.css` 의 모바일 규칙이 `!important` 로 강제한다(컴포넌트마다 `font: inherit` 같은 더 강한 규칙이 있어서다).
+- **모바일 키보드 높이는 `viewport.js` 가 CSS 변수로 알려 준다**(`--vvh`·`--kb`·`<html data-keyboard>`). iOS 는 키보드가 올라와도 레이아웃을 줄이지 않고 덮기만 해서 `100dvh` 로 짠 화면이 잘린다. 채팅방 높이는 `var(--vvh, 100dvh)` 기준이고, 키보드가 올라오면 하단 탭을 숨겨 그 높이(`--nav-reclaimed`)를 화면에 돌려준다.
 - **브레이크포인트는 880px 하나.** 모바일 우선으로 쓰고 `@media (min-width: 880px)` 에서 PC 로 바꾼다.
 - **로딩은 `Skeleton.jsx`, 빈 목록은 `EmptyState.jsx`, 오류는 전역 `.alert.alert-danger` 로 그린다.** 새 목록 화면을 만들면 이 세 가지를 그대로 쓴다.
 - **파일 선택은 기본 `<input type="file">` 버튼을 그대로 보이지 않는다.** 브라우저마다 생김새가 다르고 화면과 따로 논다. 입력칸은 라벨 안에 투명하게 깔고(라벨을 누르면 열린다) 카메라 타일을 보여 준다. 상품 등록 폼은 사진 격자의 첫 칸이 타일이고 그 안에 `0/10` 이 있다. 프로필 사진도 같은 방식(라벨 + 숨긴 입력)이다.
@@ -229,4 +231,6 @@ src/
 - [검증] 2026-09-18 `npm run build` 성공, 단위 테스트 53개 → 58개(순서 계산 5개), 실패 0. 끌기 동작 자체(마우스·손가락)는 로그인해야 열리는 화면이라 사용자 확인 필요.
 - [완료] **Vercel 배포(2026-09-18).** https://golmok-market-frontend.vercel.app · `vercel.json` rewrites 로 `/api/*` 를 백엔드(golmok-api.duckdns.org)에 전달하고, Vercel 환경변수 `VITE_WS_URL=wss://golmok-api.duckdns.org/api/ws` 로 채팅 소켓을 백엔드에 직접 연결한다(`VITE_API_BASE` 는 비워 둔다 — 값을 넣으면 rewrites 를 우회한다).
 - [검증] 2026-09-18 외부 브라우저(비로그인)로 동네 선택 → 상품 20개 목록·사진·상태 뱃지 확인. 사용자가 로그인·채팅·**휴대폰 접속**까지 확인해 "기능이 모두 작동"이라고 확인했다. Vercel 미리보기 주소(`...-git-...vercel.app`)는 백엔드 CORS 목록에 없어 로그인이 막힌다(정식 주소로 테스트할 것).
+- [완료] 모바일(iOS) 문제 수정(2026-09-18): ① 입력칸을 터치하면 화면이 확대되고 위가 잘리던 문제 — 좁은 화면 입력칸을 16px 로. ② 키보드가 올라오면 채팅방 상단이 잘리던 문제 — `viewport.js` 로 실제 보이는 높이를 받아 방 높이를 맞추고 하단 탭을 숨긴다. ③ `index.html` viewport 에 `viewport-fit=cover` 가 없어 안전영역(노치·홈바) 여백이 **전부 0 이던 것**을 고쳤다. ④ 현재 위치 찾기 실패 안내를 사유별로 나눴다(권한 거부·시간 초과·기타, 시간 초과 10 → 15초).
+- [검증] 2026-09-18 `npm run build` 성공, 단위 테스트 58개 → 65개(뷰포트 7개), 실패 0. 375px 에서 입력칸 16px·PC 15px 유지 확인, 키보드 상태를 흉내 내 하단 탭이 사라지고 58px 를 돌려받는 것까지 확인했다. **실제 iOS 기기 확인은 사용자 몫이다**(이 PC 에 iOS 가 없다).
 - [다음] 미정. 후보는 PWA(설치·오프라인·푸시 토대).

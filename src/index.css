@@ -70,6 +70,9 @@
 
   --shell-max: 1180px;
   --bp-pc: 880px;
+
+  /* 하단 탭 높이. 키보드가 올라와 탭이 숨으면 그만큼을 화면에 돌려준다(viewport.js · BottomNav). */
+  --nav-reclaimed: 0px;
 }
 
 /**
@@ -154,6 +157,8 @@
   }
 }
 
+:root[data-keyboard="open"] { --nav-reclaimed: 58px; }
+
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
@@ -174,6 +179,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   outline-offset: 2px;
 }
 input, select { font-family: inherit; }
+
+/**
+ * iOS 는 글자가 16px 보다 작은 입력칸을 터치하면 화면을 확대한다(끌 수 없는 동작이다).
+ * 확대되면 상단이 화면 밖으로 밀려 무엇을 쓰는지 보이지 않는다. 좁은 화면에서만 16px 로 올린다.
+ */
+@media (max-width: 879px) {
+  /*
+   * !important 를 쓰는 이유: 컴포넌트마다 .search input · font: inherit 처럼
+   * 더 강한 규칙으로 글자 크기를 정하고 있어서 일반 규칙으로는 이기지 못한다.
+   * 이건 취향이 아니라 iOS 의 확대 동작을 막기 위한 최소 크기라 예외 없이 적용돼야 한다.
+   */
+  input, select, textarea { font-size: 16px !important; }
+}
 h1, h2, h3, p, ul { margin: 0; }
 
 /* ---------- 공용 버튼 ---------- */
