@@ -8,7 +8,9 @@ import styles from "./PhotoSorter.module.css";
  *
  * 예전에는 사진마다 ← → 버튼이 있어 두 장만 넘어도 화면이 아래로 길어졌다.
  *
- * 끌고 있는 사진은 **포인터를 그대로 따라다닌다.** 화면이 가만히 있으면 지금 끌리는 중인지 알 수 없다.
+ * 끌고 있는 사진은 **화면에 고정(position: fixed)해 포인터를 따라다닌다.** 화면이 가만히 있으면 지금 끌리는 중인지 알 수 없다.
+ * 줄 안에 둔 채 아래로 옮기면 줄의 스크롤 영역이 늘어나 세로 스크롤바가 생긴다
+ * (가로 스크롤을 켜면 세로도 자동으로 스크롤 가능해진다). 흐름에서 빼면 어디로 옮겨도 줄 크기가 그대로다.
  * 자리를 내주는 다른 사진들은 FLIP 으로 미끄러지듯 움직인다. 순서가 바뀌면 브라우저는 새 위치로 즉시 그리므로,
  * 바뀌기 직전 위치로 되돌려 놓고 새 위치까지 애니메이션을 직접 준다.
  *
@@ -60,8 +62,6 @@ export default function PhotoSorter({ photos, onReorder, onRemove, children }) {
         el.style.transform = "";
       });
     }
-    // 끌던 사진은 새 칸으로 옮겨졌다. 그리기 전에 포인터 위치로 다시 맞춰 한 칸씩 튀지 않게 한다.
-    if (dragged.current) follow(pointer.current.x, pointer.current.y);
     snapshot();
   }, [photos]);
 
@@ -76,24 +76,25 @@ export default function PhotoSorter({ photos, onReorder, onRemove, children }) {
     announce(from, to);
   }
 
-  /** 끌고 있는 사진을 지금 포인터 위치로 옮긴다. 자리(칸)가 바뀌어도 잡은 지점이 유지된다. */
+  /** 끌고 있는 사진을 지금 포인터 위치로 옮긴다. 기준점이 고정이라 순서가 바뀌어도 튀지 않는다. */
   function follow(clientX, clientY) {
     const info = dragged.current;
     if (!info) return;
-    const box = info.element.getBoundingClientRect();
-    const left = box.left - info.tx;   // 변형을 걷어낸 원래 위치
-    const top = box.top - info.ty;
-    info.tx = clientX - info.grabX - left;
-    info.ty = clientY - info.grabY - top;
-    info.element.style.transform = `translate(${info.tx}px, ${info.ty}px)`;
+    info.element.style.transform =
+      `translate(${clientX - info.grabX - info.originX}px, ${clientY - info.grabY - info.originY}px)`;
   }
 
   function beginDrag(index, element, clientX, clientY) {
     const box = element.getBoundingClientRect();
     // 칸의 위치는 끌기 내내 그대로다. 미끄러지는 중인 칸의 순간 위치로 계산하면 자리 판정이 흔들린다.
     slots.current = cells().map((el) => el.getBoundingClientRect());
+    // 흐름에서 빼 화면에 고정한다. 크기를 함께 박아 두어야 부모가 바뀌어도 모양이 유지된다.
+    Object.assign(element.style, {
+      position: "fixed", left: `${box.left}px`, top: `${box.top}px`,
+      width: `${box.width}px`, height: `${box.height}px`, margin: "0",
+    });
     dragged.current = {
-      element, url: photos[index], tx: 0, ty: 0,
+      element, url: photos[index], originX: box.left, originY: box.top,
       grabX: clientX - box.left, grabY: clientY - box.top,
     };
     setDragging(index);
@@ -159,11 +160,17 @@ export default function PhotoSorter({ photos, onReorder, onRemove, children }) {
     clearTimeout(longPress.current);
     const info = dragged.current;
     if (info) {
-      // 놓으면 제자리로 스르륵 들어간다. 갑자기 튀면 어디에 놓였는지 눈이 따라가지 못한다.
+      // 놓으면 새 자리로 스르륵 들어간 뒤 흐름으로 돌아간다. 갑자기 튀면 어디에 놓였는지 눈이 따라가지 못한다.
       const element = info.element;
-      element.style.transition = reduceMotion() ? "" : `transform ${SLIDE_MS}ms ease`;
-      element.style.transform = "";
-      setTimeout(() => { element.style.transition = ""; }, SLIDE_MS);
+      const slot = cells()[dragging]?.getBoundingClientRect();
+      const settle = () => { element.style.cssText = ""; };
+      if (slot && !reduceMotion()) {
+        element.style.transition = `transform ${SLIDE_MS}ms ease`;
+        element.style.transform = `translate(${slot.left - info.originX}px, ${slot.top - info.originY}px)`;
+        setTimeout(settle, SLIDE_MS);
+      } else {
+        settle();
+      }
     }
     if (dragging !== null && start.current?.moved) announce(start.current.index, dragging);
     dragged.current = null;

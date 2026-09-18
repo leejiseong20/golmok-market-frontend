@@ -16,8 +16,14 @@
 
 .cell { position: relative; flex: 0 0 120px; }
 
-/* 끌고 있는 칸은 다른 사진 위로 올라온다(자리를 비켜 준 사진에 가리지 않는다). */
-.lifted { z-index: 2; }
+/* 사진이 화면에 뜬 동안의 빈자리. 어디에 놓이는지 보이게 점선으로 남긴다. */
+.lifted {
+  border-radius: var(--radius-sm);
+  outline: 1px dashed var(--line-strong);
+  outline-offset: -1px;
+}
+/* 삭제 버튼은 자리에 남아 있어도 쓸 일이 없다. 끌고 있는 동안만 숨긴다. */
+.lifted .remove { opacity: 0; }
 
 .photo {
   position: relative;
@@ -47,6 +53,8 @@
  * 그래서 여기서는 transform 을 건드리지 않고(덮어쓰면 따라오지 않는다) 들린 느낌만 더한다.
  */
 .dragging {
+  /* 위치는 자바스크립트가 화면 기준으로 직접 준다(position: fixed). 여기서는 겹침 순서와 느낌만 맡는다. */
+  z-index: 50;
   cursor: grabbing;
   box-shadow: var(--shadow-2);
   outline: 2px solid var(--accent);
