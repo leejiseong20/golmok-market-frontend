@@ -71,8 +71,8 @@
   --shell-max: 1180px;
   --bp-pc: 880px;
 
-  /* 하단 탭 높이. 키보드가 올라와 탭이 숨으면 그만큼을 화면에 돌려준다(viewport.js · BottomNav). */
-  --nav-reclaimed: 0px;
+  /* 하단 탭이 차지하는 높이(홈바 포함). 키보드가 올라와 탭이 숨으면 0 이 된다(viewport.js · BottomNav). */
+  --nav-space: calc(58px + env(safe-area-inset-bottom, 0px));
 }
 
 /**
@@ -157,7 +157,7 @@
   }
 }
 
-:root[data-keyboard="open"] { --nav-reclaimed: 58px; }
+:root[data-keyboard="open"] { --nav-space: 0px; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 

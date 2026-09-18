@@ -52,6 +52,7 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
   const sendingRef = useRef(false);
   const olderController = useRef(null);
   const scroller = useRef(null);
+  const roomRef = useRef(null);
   const stickToBottom = useRef(true);
   const restoreFrom = useRef(null);
   const read = useRef({ pending: false, again: false });
@@ -120,6 +121,34 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
     document.addEventListener("visibilitychange", onVisible);
     return () => { offEvent(); offConnected(); document.removeEventListener("visibilitychange", onVisible); };
   }, [roomId, me]);
+
+  /**
+   * 방이 화면의 어디에서 시작하는지 재서 CSS 에 알려 준다(높이 계산에 쓴다).
+   *
+   * 예전에는 "헤더 105px + 여백 + 하단 탭" 을 눈대중으로 190px 이라 박아 뒀는데,
+   * 헤더 높이는 기기 폭과 글꼴 크기에 따라 달라진다. 그래서 어떤 기기에서는 방이 화면보다 길어져
+   * 입력창이 키보드에 가렸다. 재서 쓰면 기기와 상관없이 맞는다.
+   *
+   * getBoundingClientRect 는 레이아웃 기준이므로, 키보드가 화면을 밀어 올린 만큼(offsetTop)을 뺀다.
+   */
+  useEffect(() => {
+    const element = roomRef.current;
+    if (!element) return undefined;
+    const viewport = window.visualViewport;
+    const measure = () => {
+      const top = element.getBoundingClientRect().top - (viewport?.offsetTop ?? 0);
+      element.style.setProperty("--chat-top", `${Math.max(0, Math.round(top))}px`);
+    };
+    measure();
+    viewport?.addEventListener("resize", measure);
+    viewport?.addEventListener("scroll", measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      viewport?.removeEventListener("resize", measure);
+      viewport?.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [roomId]);
 
   // 이전 메시지를 위에 붙이면 보던 위치를 유지하고, 맨 아래를 보고 있었다면 새 메시지를 따라 내려간다.
   useLayoutEffect(() => {
@@ -215,7 +244,7 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
 
   const room = info.data;
   if (info.error && !room) {
-    return <div className={styles.room}>
+    return <div className={styles.room} ref={roomRef}>
       <div className={styles.error} role="alert">{info.error}
         <div className={styles.errorActions}>
           <button onClick={() => setReload((value) => value + 1)}>다시 시도</button>
@@ -228,7 +257,7 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
   // 탈퇴한 상대에게는 보낼 수 없고(서버도 거부한다) 프로필도 없다. 대화 기록은 그대로 보여준다.
   const withdrawn = !!room?.opponent.withdrawn;
 
-  return <div className={styles.room}>
+  return <div className={styles.room} ref={roomRef}>
     <header className={styles.header}>
       <button className={styles.back} onClick={onBack} aria-label="채팅 목록으로">←</button>
       {room && <Avatar url={room.opponent.profileImageUrl} name={room.opponent.nickname} size={40} />}
