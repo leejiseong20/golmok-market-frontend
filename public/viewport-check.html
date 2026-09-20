@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>화면 크기 진단</title>
+<style>
+  /* 앱과 무관한 임시 진단 페이지. 확인이 끝나면 지운다. */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #14120f;
+    color: #f5f1ea;
+    display: flex;
+    flex-direction: column;
+    /* 앱의 채팅방과 같은 방식으로 높이를 잡아 본다. */
+    height: calc(var(--vvh, 100dvh) - var(--nav-space, 0px));
+  }
+  h1 { font-size: 16px; margin: 12px 16px 8px; }
+  .rows { flex: 1; overflow: auto; padding: 0 16px 8px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #322c25; font-size: 15px; }
+  .row b { font-variant-numeric: tabular-nums; font-size: 18px; }
+  .ok { color: #7fd6a8; }
+  .no { color: #ff8f78; }
+  .composer { display: flex; gap: 8px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #322c25; background: #1e1a16; }
+  /* 16px 이상이라 iOS 가 확대하지 않아야 한다. */
+  input { flex: 1; min-width: 0; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid #463f35; background: #221e19; color: #f5f1ea; }
+  .hint { margin: 0 16px 8px; font-size: 13px; color: #bcb3a6; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <h1>화면 크기 진단 (임시)</h1>
+  <p class="hint">아래 입력칸을 누른 <b>상태로</b> 화면을 캡처해 주세요. 키보드가 올라온 동안의 값이 필요합니다.</p>
+  <div class="rows" id="rows"></div>
+  <div class="composer">
+    <input id="probe" placeholder="여기를 눌러 키보드를 올려 주세요" />
+  </div>
+
+<script>
+  const rows = document.getElementById("rows");
+  const line = (label, value, state) =>
+    `<div class="row"><span>${label}</span><b class="${state || ""}">${value}</b></div>`;
+
+  function render() {
+    const vv = window.visualViewport;
+    const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height)) : 0;
+    const open = kb > 120;
+    // 앱이 쓰는 것과 같은 변수를 흉내 낸다.
+    document.documentElement.style.setProperty("--vvh", vv ? `${Math.round(vv.height)}px` : "100dvh");
+    document.documentElement.style.setProperty("--nav-space", open ? "0px" : "58px");
+
+    const composerTop = Math.round(document.querySelector(".composer").getBoundingClientRect().top);
+    const visibleBottom = vv ? Math.round(vv.height) : window.innerHeight;
+
+    rows.innerHTML = [
+      line("visualViewport 지원", vv ? "예" : "아니오", vv ? "ok" : "no"),
+      line("innerHeight (레이아웃)", window.innerHeight),
+      line("visualViewport.height", vv ? Math.round(vv.height) : "-"),
+      line("visualViewport.offsetTop", vv ? Math.round(vv.offsetTop) : "-"),
+      line("window.scrollY", Math.round(window.scrollY)),
+      line("계산된 키보드 높이", kb, kb > 0 ? "ok" : ""),
+      line("키보드 열림 판정", open ? "열림" : "닫힘", open ? "ok" : ""),
+      line("입력줄 위치(top)", composerTop),
+      line("보이는 영역 아래쪽", visibleBottom),
+      line("입력줄이 보이나", composerTop < visibleBottom ? "보임" : "가려짐",
+        composerTop < visibleBottom ? "ok" : "no"),
+      line("safe-area-inset-bottom", getComputedStyle(document.documentElement).getPropertyValue("--sab") || "(아래 참고)"),
+    ].join("");
+  }
+
+  render();
+  window.visualViewport?.addEventListener("resize", render);
+  window.visualViewport?.addEventListener("scroll", render);
+  window.addEventListener("resize", render);
+  window.addEventListener("scroll", render);
+  document.getElementById("probe").addEventListener("focus", () => {
+    setTimeout(render, 300);
+    setTimeout(render, 700);
+  });
+  // 안전영역 값을 읽기 위한 보조 요소
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);width:1px;";
+  document.body.appendChild(probe);
+  setInterval(() => {
+    document.documentElement.style.setProperty("--sab", `${Math.round(probe.getBoundingClientRect().height)}px`);
+  }, 500);
+</script>
+</body>
+</html>
