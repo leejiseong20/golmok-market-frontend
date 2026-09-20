@@ -16,6 +16,25 @@
   overflow: hidden;
 }
 
+/**
+ * 키보드가 올라오면 방을 보이는 영역에 그대로 고정한다.
+ *
+ * 높이를 계산해 맞추는 방식은 기기마다 어긋났다. iOS 크롬에서 position: fixed; bottom: 0 은
+ * 키보드 "위"에 그려진다는 것을 실제 기기로 확인했으므로(진단 페이지), 보이는 높이만큼 채우면
+ * 헤더·대화·입력창이 정확히 한 화면에 들어온다. 카카오톡 같은 앱과 같은 방식이다.
+ */
+:global(:root[data-keyboard="open"]) .room {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  height: var(--vvh, 100dvh);
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+}
+
 .header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 .back { border: none; background: var(--surface-2); border-radius: 50%; width: 36px; height: 36px; font-size: 18px; flex-shrink: 0; }
 .who { display: grid; gap: 2px; min-width: 0; flex: 1; }

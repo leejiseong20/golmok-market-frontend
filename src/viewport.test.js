@@ -2,10 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { watchViewport } from "./viewport.js";
 
-function fakeRoot() {
+function fakeRoot(clientHeight = 800) {
   const style = new Map();
   return {
     dataset: {},
+    clientHeight,
     style: { setProperty: (key, value) => style.set(key, value) },
     read: (key) => style.get(key),
   };
@@ -77,6 +78,16 @@ test("화면이 밀려 올라가도(offsetTop) 키보드 높이는 보이는 높
   watchViewport(root, fakeViewport(450, 200));
 
   assert.equal(root.read("--kb"), "350px");
+  assert.equal(root.dataset.keyboard, "open");
+});
+
+test("innerHeight 가 키보드와 함께 줄어드는 브라우저에서도 알아챈다(iOS 크롬 실측)", () => {
+  // 실제 아이폰 값: innerHeight 와 보이는 높이가 모두 390 이고, 레이아웃 높이만 684 로 남는다.
+  globalThis.innerHeight = 390;
+  const root = fakeRoot(684);
+  watchViewport(root, fakeViewport(390, 294));
+
+  assert.equal(root.read("--kb"), "294px");
   assert.equal(root.dataset.keyboard, "open");
 });
 
