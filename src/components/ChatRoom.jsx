@@ -52,6 +52,7 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
   const sendingRef = useRef(false);
   const olderController = useRef(null);
   const scroller = useRef(null);
+  const composer = useRef(null);
   const roomRef = useRef(null);
   const stickToBottom = useRef(true);
   const restoreFrom = useRef(null);
@@ -215,6 +216,8 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
     event?.preventDefault();
     const content = draft;
     if (!content.trim() || sendingRef.current) return;
+    // 보내기 전에 입력칸에 초점이 있었는지 기억한다. 키보드를 내리고 누른 것이라면 다시 올리지 않는다.
+    const hadFocus = document.activeElement === composer.current;
     sendingRef.current = true; setSending(true); setSendError("");
     try {
       const message = await sendMessage(roomId, content);
@@ -225,6 +228,8 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
       setDraft((current) => current === content ? "" : current);
       // 나간 상대에게 보내면 서버가 상대 목록에 방을 되살린다.
       setInfo((old) => old.data ? { ...old, data: { ...old.data, opponentLeft: false } } : old);
+      // 한 줄 보내고 이어서 쓰는 것이 보통이다. 초점을 입력칸에 돌려놔 키보드가 그대로 남는다.
+      if (hadFocus && composer.current && document.activeElement !== composer.current) composer.current.focus();
     } catch (error) {
       if (alive.current) setSendError(error.message);
     } finally {
@@ -363,13 +368,20 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
     <form className={styles.composer} onSubmit={submit}>
       {sendError && <p className={styles.sendError} role="alert">{sendError}</p>}
       <div className={styles.inputRow}>
-        <textarea aria-label="메시지 입력" placeholder={withdrawn ? "탈퇴한 사용자에게는 보낼 수 없어요" : "메시지를 입력하세요"}
+        <textarea ref={composer} aria-label="메시지 입력" placeholder={withdrawn ? "탈퇴한 사용자에게는 보낼 수 없어요" : "메시지를 입력하세요"}
           rows={1} maxLength={MAX_LENGTH}
           value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown}
           // 쓰려고 눌렀다면 최신 대화가 보여야 한다. 키보드가 올라오며 줄어든 높이는 위 effect 가 이어서 맞춘다.
           onFocus={() => { stickToBottom.current = true; scrollToLatest(); }}
           disabled={!room || withdrawn} />
-        <button type="submit" className={styles.send} disabled={sending || !draft.trim() || !room || withdrawn}>
+        {/*
+          * onMouseDown 을 막아 버튼이 초점을 가져가지 않게 한다.
+          * 초점이 입력칸을 떠나면 모바일 키보드가 닫힌다. 게다가 보낸 뒤에는 입력칸이 비어
+          * 이 버튼이 disabled 가 되므로 초점이 갈 곳이 없어진다. 기본 동작만 막으면 click 은 그대로 온다.
+          * (터치에서도 iOS 가 mousedown 을 흉내 내 보내므로 같은 방법이 통한다.)
+          */}
+        <button type="submit" className={styles.send} onMouseDown={(event) => event.preventDefault()}
+          disabled={sending || !draft.trim() || !room || withdrawn}>
           {sending ? "전송 중" : "전송"}</button>
       </div>
       {draft.length > MAX_LENGTH - 100 && <p className={styles.count}>{draft.length} / {MAX_LENGTH}</p>}
