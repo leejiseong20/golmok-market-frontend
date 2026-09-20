@@ -32,6 +32,8 @@
 
 /* 입력칸은 타일 전체가 누름 영역이 되도록 위에 투명하게 깔아 둔다. */
 .picker input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: inherit; }
-.note { font-size: 13px; color: var(--ink-4); }
+.note { font-size: 13px; color: var(--ink-4); font-weight: 400; }
+/* 입력칸 바로 아래에 붙는 오류. 라벨이 굵어서 굵기를 되돌린다. */
+.fieldError { font-size: var(--fs-sm); font-weight: 400; color: var(--danger); }
 .error { padding: var(--s3); border-radius: var(--radius-sm); color: var(--danger); background: var(--danger-bg); overflow-wrap: anywhere; }
 .submit { composes: btn btn-primary btn-lg btn-block from global; }
