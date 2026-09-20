@@ -5,6 +5,20 @@
     <!-- viewport-fit=cover: 이게 없으면 env(safe-area-inset-*) 가 0 이 되어 아이폰 홈바·노치 여백이 적용되지 않는다. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>골목마켓 · 동네 기반 중고거래</title>
+    <meta name="description" content="우리 동네 이웃과 직접 만나서 거래하는 중고 장터" />
+
+    <!-- 홈 화면에 설치해 앱처럼 쓰기 위한 것들(PWA). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- iOS 는 manifest 의 아이콘을 쓰지 않는다. 홈 화면 아이콘은 이 태그로만 정해진다. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="골목마켓" />
+    <!-- 설치한 앱을 주소창 없이 연다. apple- 쪽은 iOS 전용이고 표준 이름은 mobile-web-app-capable 이다. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- 주소창·상태 표시줄 색. 시스템 설정을 따른다(사용자가 앱에서 고른 화면 모드까지는 따라가지 못한다). -->
+    <meta name="theme-color" content="#faf8f6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151210" media="(prefers-color-scheme: dark)" />
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"

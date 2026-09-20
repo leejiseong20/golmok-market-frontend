@@ -20,6 +20,7 @@ npm run dev     # http://127.0.0.1:5173
 | `npm run build` | 프로덕션 번들 |
 | `npm test` | API 클라이언트 · 채팅 소켓 단위 테스트 (node:test) |
 | `npm run test:e2e` | Playwright E2E. API는 모킹하므로 백엔드 없이 돈다 |
+| `npm run icons` | 앱 아이콘 PNG 재생성(`scripts/make-icons.mjs`) |
 
 ## 구조
 
