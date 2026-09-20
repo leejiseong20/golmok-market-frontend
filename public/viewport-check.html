@@ -12,60 +12,69 @@
     font-family: system-ui, sans-serif;
     background: #14120f;
     color: #f5f1ea;
-    display: flex;
-    flex-direction: column;
-    /* 앱의 채팅방과 같은 방식으로 높이를 잡아 본다. */
-    height: calc(var(--vvh, 100dvh) - var(--nav-space, 0px));
+    /* 스크롤이 생기지 않게 화면 두 배 높이의 여백을 두지 않는다. */
+    height: 100dvh;
+    overflow: hidden;
   }
-  h1 { font-size: 16px; margin: 12px 16px 8px; }
-  .rows { flex: 1; overflow: auto; padding: 0 16px 8px; }
-  .row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #322c25; font-size: 15px; }
-  .row b { font-variant-numeric: tabular-nums; font-size: 18px; }
+
+  /*
+   * 확인 1) 화면에 고정한 막대. iOS 크롬에서 키보드가 올라왔을 때
+   * 이 막대가 키보드 "위"에 보이는지, 키보드 "뒤"로 숨는지가 핵심이다.
+   */
+  .pinned {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    background: #1e1a16;
+    border-top: 2px solid #dd5c37;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .tag { font-size: 12px; color: #dd5c37; font-weight: 700; margin-bottom: 6px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; font-size: 13px; }
+  .grid div { display: flex; justify-content: space-between; gap: 6px; }
+  .grid b { font-variant-numeric: tabular-nums; }
   .ok { color: #7fd6a8; }
   .no { color: #ff8f78; }
-  .composer { display: flex; gap: 8px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #322c25; background: #1e1a16; }
-  /* 16px 이상이라 iOS 가 확대하지 않아야 한다. */
-  input { flex: 1; min-width: 0; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid #463f35; background: #221e19; color: #f5f1ea; }
-  .hint { margin: 0 16px 8px; font-size: 13px; color: #bcb3a6; line-height: 1.5; }
+  input { width: 100%; font-size: 16px; padding: 10px 12px; margin-top: 8px; border-radius: 10px; border: 1px solid #463f35; background: #221e19; color: #f5f1ea; }
+  .hint { padding: 12px 16px; font-size: 14px; line-height: 1.6; color: #bcb3a6; }
 </style>
 </head>
 <body>
-  <h1>화면 크기 진단 (임시)</h1>
-  <p class="hint">아래 입력칸을 누른 <b>상태로</b> 화면을 캡처해 주세요. 키보드가 올라온 동안의 값이 필요합니다.</p>
-  <div class="rows" id="rows"></div>
-  <div class="composer">
+  <p class="hint">
+    아래 주황색 막대는 <b>화면에 고정</b>돼 있습니다.<br />
+    입력칸을 눌러 키보드를 올린 뒤, <b>막대가 키보드 위에 보이는지</b> 확인하고 그 상태로 캡처해 주세요.
+  </p>
+
+  <div class="pinned">
+    <div class="tag">고정 막대 (position: fixed; bottom: 0)</div>
+    <div class="grid" id="grid"></div>
     <input id="probe" placeholder="여기를 눌러 키보드를 올려 주세요" />
   </div>
 
 <script>
-  const rows = document.getElementById("rows");
-  const line = (label, value, state) =>
-    `<div class="row"><span>${label}</span><b class="${state || ""}">${value}</b></div>`;
+  const grid = document.getElementById("grid");
+  const cell = (label, value, state) => `<div><span>${label}</span><b class="${state || ""}">${value}</b></div>`;
 
   function render() {
     const vv = window.visualViewport;
     const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height)) : 0;
     const open = kb > 120;
-    // 앱이 쓰는 것과 같은 변수를 흉내 낸다.
-    document.documentElement.style.setProperty("--vvh", vv ? `${Math.round(vv.height)}px` : "100dvh");
-    document.documentElement.style.setProperty("--nav-space", open ? "0px" : "58px");
+    const bar = document.querySelector(".pinned").getBoundingClientRect();
+    const visibleBottom = vv ? Math.round(vv.offsetTop + vv.height) : window.innerHeight;
 
-    const composerTop = Math.round(document.querySelector(".composer").getBoundingClientRect().top);
-    const visibleBottom = vv ? Math.round(vv.height) : window.innerHeight;
-
-    rows.innerHTML = [
-      line("visualViewport 지원", vv ? "예" : "아니오", vv ? "ok" : "no"),
-      line("innerHeight (레이아웃)", window.innerHeight),
-      line("visualViewport.height", vv ? Math.round(vv.height) : "-"),
-      line("visualViewport.offsetTop", vv ? Math.round(vv.offsetTop) : "-"),
-      line("window.scrollY", Math.round(window.scrollY)),
-      line("계산된 키보드 높이", kb, kb > 0 ? "ok" : ""),
-      line("키보드 열림 판정", open ? "열림" : "닫힘", open ? "ok" : ""),
-      line("입력줄 위치(top)", composerTop),
-      line("보이는 영역 아래쪽", visibleBottom),
-      line("입력줄이 보이나", composerTop < visibleBottom ? "보임" : "가려짐",
-        composerTop < visibleBottom ? "ok" : "no"),
-      line("safe-area-inset-bottom", getComputedStyle(document.documentElement).getPropertyValue("--sab") || "(아래 참고)"),
+    grid.innerHTML = [
+      cell("지원", vv ? "O" : "X", vv ? "ok" : "no"),
+      cell("innerH", window.innerHeight),
+      cell("보이는H", vv ? Math.round(vv.height) : "-"),
+      cell("offsetTop", vv ? Math.round(vv.offsetTop) : "-"),
+      cell("키보드", kb, kb > 0 ? "ok" : ""),
+      cell("판정", open ? "열림" : "닫힘", open ? "ok" : ""),
+      cell("scrollY", Math.round(window.scrollY)),
+      cell("막대top", Math.round(bar.top)),
+      cell("보이는바닥", visibleBottom),
+      cell("막대가", bar.top < visibleBottom ? "보임" : "가려짐", bar.top < visibleBottom ? "ok" : "no"),
     ].join("");
   }
 
@@ -75,16 +84,9 @@
   window.addEventListener("resize", render);
   window.addEventListener("scroll", render);
   document.getElementById("probe").addEventListener("focus", () => {
-    setTimeout(render, 300);
-    setTimeout(render, 700);
+    [200, 500, 900].forEach((delay) => setTimeout(render, delay));
   });
-  // 안전영역 값을 읽기 위한 보조 요소
-  const probe = document.createElement("div");
-  probe.style.cssText = "position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);width:1px;";
-  document.body.appendChild(probe);
-  setInterval(() => {
-    document.documentElement.style.setProperty("--sab", `${Math.round(probe.getBoundingClientRect().height)}px`);
-  }, 500);
+  setInterval(render, 1000);
 </script>
 </body>
 </html>
