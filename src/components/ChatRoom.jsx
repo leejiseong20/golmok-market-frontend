@@ -162,6 +162,35 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
     }
   }, [messages.items]);
 
+  /**
+   * 맨 아래(최신 대화)로 내린다.
+   *
+   * 키보드는 한 번에 올라오지 않아 높이가 여러 단계로 바뀐다. 지금 한 번 맞추고 다음 프레임에 한 번 더 맞춘다.
+   */
+  function scrollToLatest() {
+    const element = scroller.current;
+    if (!element) return;
+    element.scrollTop = element.scrollHeight;
+    requestAnimationFrame(() => {
+      if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
+    });
+  }
+
+  /**
+   * 키보드가 열리고 닫힐 때 최신 대화를 계속 보여 준다.
+   *
+   * 키보드가 올라오면 방을 화면 높이에 맞춰 고정하므로 대화가 보이는 영역이 줄어드는데,
+   * 브라우저는 scrollTop 을 그대로 둔다. 그래서 줄어든 만큼 아래쪽(최신)이 잘리고 위쪽 옛 대화가 보인다.
+   * 맨 아래를 보고 있었다면 그만큼 다시 내려 준다(위로 올려 옛 대화를 읽던 중이면 건드리지 않는다).
+   */
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return undefined;
+    const follow = () => { if (stickToBottom.current) scrollToLatest(); };
+    viewport.addEventListener("resize", follow);
+    return () => viewport.removeEventListener("resize", follow);
+  }, []);
+
   function onScroll() {
     const element = scroller.current;
     stickToBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
@@ -337,6 +366,8 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
         <textarea aria-label="메시지 입력" placeholder={withdrawn ? "탈퇴한 사용자에게는 보낼 수 없어요" : "메시지를 입력하세요"}
           rows={1} maxLength={MAX_LENGTH}
           value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown}
+          // 쓰려고 눌렀다면 최신 대화가 보여야 한다. 키보드가 올라오며 줄어든 높이는 위 effect 가 이어서 맞춘다.
+          onFocus={() => { stickToBottom.current = true; scrollToLatest(); }}
           disabled={!room || withdrawn} />
         <button type="submit" className={styles.send} disabled={sending || !draft.trim() || !room || withdrawn}>
           {sending ? "전송 중" : "전송"}</button>
