@@ -227,6 +227,13 @@ h1, h2, h3, p, ul { margin: 0; }
 .btn-danger { background: var(--danger); border-color: var(--danger); color: var(--on-danger); font-weight: 700; }
 .btn-danger:hover:not(:disabled) { filter: brightness(1.08); }
 
+/* 세 칸 고르기(설정의 화면 모드 · 상품 판매 상태). 고른 칸은 aria-pressed 로 표시하고, 채운 모양으로도 구분한다(색각 차이). */
+.seg { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: var(--s1); padding: var(--s1); border-radius: var(--radius-sm); background: var(--surface-2); }
+.seg-item { min-height: var(--control-sm); border: 0; border-radius: calc(var(--radius-sm) - 2px); background: none; color: var(--ink-3); font: inherit; font-size: var(--fs-sm); font-weight: 600; }
+.seg-item:hover:not(:disabled) { color: var(--ink); }
+.seg-item[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+.seg-item:disabled:not([aria-pressed="true"]) { opacity: 0.45; cursor: default; }
+.seg-item[aria-pressed="true"]:disabled { cursor: default; }
 .btn-sm { min-height: var(--control-sm); padding: 0 var(--s3); font-size: var(--fs-sm); }
 .btn-lg { min-height: 48px; padding: 0 var(--s5); font-size: var(--fs-lg); }
 .btn-block { width: 100%; }

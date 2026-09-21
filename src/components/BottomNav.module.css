@@ -36,7 +36,7 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
 
 .tab {
   position: relative;

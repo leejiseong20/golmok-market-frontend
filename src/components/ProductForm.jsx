@@ -15,9 +15,13 @@ const LABELS = {
 /** 입력칸 옆에 직접 붙일 수 있는 필드. 나머지는 폼 아래 목록으로 보여 준다. */
 const INLINE = ["title", "description", "price", "categoryId", "regionId"];
 
+const TRADE_TYPES = [{ value: "DIRECT", label: "직거래" }, { value: "DELIVERY", label: "택배거래" }];
+/** "1000000" → "1,000,000". 빈 값은 빈 값 그대로다(0 을 미리 채우지 않는다). */
+const formatDigits = (value) => value === "" || value == null ? "" : Number(value).toLocaleString("ko-KR");
+
 export default function ProductForm({ product, categories, onClose, onSaved, onVerifyRegion }) {
   const [form, setForm] = useState({ title: product?.title ?? "", description: product?.description ?? "",
-    price: product?.price ?? "", categoryId: product?.categoryId ?? "", regionId: product?.regionId ?? "",
+    price: product?.price != null ? String(product.price) : "", categoryId: product?.categoryId ?? "", regionId: product?.regionId ?? "",
     isNegotiable: product?.isNegotiable ?? false, tradeType: product?.tradeType ?? "DIRECT" });
   const [photos, setPhotos] = useState(product?.images.map((image) => image.imageUrl) ?? []);
   const [regions, setRegions] = useState([]);
@@ -117,19 +121,7 @@ export default function ProductForm({ product, categories, onClose, onSaved, onV
     {!loading && !loadError && !regions.length && <div><p>상품을 등록하려면 먼저 동네를 인증해 주세요.</p><button onClick={onVerifyRegion}>내 동네 인증하기</button></div>}
     {!loading && !loadError && regions.length > 0 && <form onSubmit={submit} className={styles.form}>
       <fieldset disabled={!!busy} className={styles.fields}>
-        <label>제목<input required minLength={2} maxLength={100} value={form.title} onChange={set("title")} {...invalid("title")} />{fieldError("title")}</label>
-        <label>설명
-          <textarea required minLength={10} rows={5} value={form.description} onChange={set("description")} {...invalid("description")} />
-          <span className={styles.note}>10자 이상 입력해 주세요. 상태·사용 기간·거래 방법을 적으면 좋아요.</span>
-          {fieldError("description")}</label>
-        <label>가격 (원)<input required type="number" min="0" max="2147483647" step="1" value={form.price} onChange={set("price")} {...invalid("price")} />{fieldError("price")}</label>
-        <label>카테고리<select required value={form.categoryId} onChange={set("categoryId")} {...invalid("categoryId")}><option value="">선택해 주세요</option>
-          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>{fieldError("categoryId")}</label>
-        {!categories.length && <p className={styles.error}>카테고리를 불러오지 못했습니다. 화면을 닫고 카테고리 조회를 다시 시도해 주세요.</p>}
-        <label>거래 동네<select required value={form.regionId} onChange={set("regionId")} {...invalid("regionId")}>
-          {regions.map((region) => <option key={region.id} value={region.id}>{region.name}{region.isPrimary ? " (대표)" : ""}</option>)}</select>{fieldError("regionId")}</label>
-        <label>거래 방식<select value={form.tradeType} onChange={set("tradeType")}><option value="DIRECT">직거래</option><option value="DELIVERY">택배거래</option></select></label>
-        <label className={styles.check}><input type="checkbox" checked={form.isNegotiable} onChange={(e) => setForm((old) => ({ ...old, isNegotiable: e.target.checked }))} />가격 제안 가능</label>
+        {/* 중고거래는 사진이 먼저다. 맨 위에 둔다(2026-09-21). */}
         <p className={styles.label} id="product-photos">사진</p>
         <p className={styles.note}>JPG·PNG·WEBP, 장당 5MB까지. 끌어서 순서를 바꿀 수 있고 맨 앞이 대표 사진이에요.</p>
         {external && <p className={styles.error}>기존 외부 사진은 수정 시 사용할 수 없어요. 삭제한 뒤 새 사진을 올려 주세요.</p>}
@@ -148,6 +140,35 @@ export default function ProductForm({ product, categories, onClose, onSaved, onV
               disabled={photos.length >= 10 || busy === "upload"} />
           </label>
         </PhotoSorter>
+        <label>제목<input required minLength={2} maxLength={100} value={form.title} onChange={set("title")} {...invalid("title")} />{fieldError("title")}</label>
+        <label>설명
+          <textarea required minLength={10} rows={5} value={form.description} onChange={set("description")} {...invalid("description")} />
+          <span className={styles.note}>10자 이상 입력해 주세요. 상태·사용 기간·거래 방법을 적으면 좋아요.</span>
+          {fieldError("description")}</label>
+        {/*
+          가격은 숫자 입력칸(type="number")이 아니라 글자 칸에 숫자 키패드(inputMode)다. 숫자 칸은 쉼표를 찍을 수 없어
+          1000000 의 자릿수가 한눈에 안 보였다. 상태에는 숫자만 두고 보일 때만 쉼표를 찍는다.
+        */}
+        <label>가격<span className={styles.money}>
+          <input required inputMode="numeric" autoComplete="off" value={formatDigits(form.price)} placeholder="0"
+            onChange={(e) => setForm((old) => ({ ...old, price: e.target.value.replace(/D/g, "").replace(/^0+(?=d)/, "").slice(0, 10) }))}
+            {...invalid("price")} />
+          <span aria-hidden="true">원</span></span>{fieldError("price")}</label>
+        <label>카테고리<select required value={form.categoryId} onChange={set("categoryId")} {...invalid("categoryId")}><option value="">선택해 주세요</option>
+          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>{fieldError("categoryId")}</label>
+        {!categories.length && <p className={styles.error}>카테고리를 불러오지 못했습니다. 화면을 닫고 카테고리 조회를 다시 시도해 주세요.</p>}
+        <label>거래 동네<select required value={form.regionId} onChange={set("regionId")} {...invalid("regionId")}>
+          {regions.map((region) => <option key={region.id} value={region.id}>{region.name}{region.isPrimary ? " (대표)" : ""}</option>)}</select>{fieldError("regionId")}</label>
+        {/* 선택지가 둘뿐이라 목록을 여는 대신 한 번에 보이는 두 칸으로 고른다. */}
+        <div className={styles.group}>
+          <p className={styles.label} id="trade-type">거래 방식</p>
+          <div className="seg" role="group" aria-labelledby="trade-type">
+            {TRADE_TYPES.map((option) => <button key={option.value} type="button" className="seg-item"
+              aria-pressed={form.tradeType === option.value}
+              onClick={() => setForm((old) => ({ ...old, tradeType: option.value }))}>{option.label}</button>)}
+          </div>
+        </div>
+        <label className={styles.check}><input type="checkbox" checked={form.isNegotiable} onChange={(e) => setForm((old) => ({ ...old, isNegotiable: e.target.checked }))} />가격 제안 가능</label>
       </fieldset>
       {error && <div className={styles.error} role="alert">{error}
         {errors.some((item) => !INLINE.includes(item.field)) && <ul>

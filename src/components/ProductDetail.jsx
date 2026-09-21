@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { bumpProduct, changeProductStatus, deleteProduct } from "../api/productApi.js";
-import { formatDate, formatPrice, statusLabel } from "../data/format.js";
+import { formatPrice, relativeTime, statusLabel } from "../data/format.js";
 import Avatar from "./Avatar.jsx";
 import Icon from "./Icon.jsx";
 import Lightbox from "./Lightbox.jsx";
 import Modal from "./Modal.jsx";
 import { toast } from "../toast.js";
 import styles from "./Modal.module.css";
+
+const STATUS_OPTIONS = [
+  { value: "ON_SALE", label: "판매중" },
+  { value: "RESERVED", label: "예약중" },
+  { value: "SOLD", label: "판매완료" },
+];
 
 export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChanged, onDeleted, onStartChat, onOpenProfile, onToggleFavorite, onReport }) {
   const [index, setIndex] = useState(0);
@@ -145,17 +151,7 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
         <span className="sr-only" aria-live="polite">{count}장 중 {index + 1}번째 사진</span>
         <button className={styles.pagerArrow} onClick={() => showPhoto(index + 1)} disabled={index === count - 1} aria-label="다음 사진">→</button>
       </div>}
-      <h3 className={styles.productTitle}>{product.title}</h3>
-      <p className={styles.note}>{product.categoryName} · {product.regionName}</p>
-      <span className={styles.tag}>{statusLabel(product.status)}</span>
-      <span className={styles.tag}>{product.tradeType === "DIRECT" ? "직거래" : "택배거래"}</span>
-      {product.isMine && <span className={styles.tag}>내 상품</span>}
-      <p className={styles.price}>{formatPrice(product.price)}</p>
-      {product.isNegotiable && <p className={styles.note}>가격 제안 가능</p>}
-      <p className={styles.description}>{product.description}</p>
-      {/* 관심 수는 아래 찜 버튼이 보여 주므로 여기서는 빼고 조회·채팅만 둔다. */}
-      <p className={styles.note}>조회 {product.viewCount} · 채팅 {product.chatCount}</p>
-      <p className={styles.note}>등록 {formatDate(product.createdAt)}</p>
+      {/* 누가 파는지를 먼저 본다. 판매자는 사진 바로 아래다. */}
       <div className={styles.seller}>
         <Avatar url={product.seller.profileImageUrl} name={product.seller.nickname} size={44} />
         <div className={styles.sellerInfo}>
@@ -163,35 +159,59 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
           <span>매너온도 {Number(product.seller.mannerTemp).toFixed(1)}°C</span>
         </div>
       </div>
-      {!product.isMine && <section aria-label="판매자와 대화">
-        {error && <p className={styles.error} role="alert">{error}</p>}
-        <div className={styles.actions}>
-          <button className={styles.primary} disabled={pending === "chat"} onClick={startChat}>{pending === "chat" ? "채팅방 여는 중…" : "채팅하기"}</button>
-          <button className={styles.favorite + (product.isLiked ? " " + styles.favoriteOn : "")}
-            disabled={pending === "favorite"} onClick={favorite} aria-pressed={product.isLiked}>
-            <Icon name="heart" size={17} filled={product.isLiked} /> 관심 {product.favoriteCount}
-          </button>
-        </div>
-      </section>}
-      {/* 신고는 드문 동작이라 버튼 줄 아래 조용한 글자 링크로 둔다. 판매자 신고·차단은 프로필에서 한다. */}
+      <h3 className={styles.productTitle}>{product.title}</h3>
+      <p className={styles.detailMeta}>{product.categoryName} · {product.regionName} · {relativeTime(product.bumpedAt ?? product.createdAt)}</p>
+      {/* 판매중은 기본 상태라 목록 카드처럼 표시하지 않는다. */}
+      <p className={styles.tags}>
+        {product.status !== "ON_SALE" && <span className={styles.tag + " " + styles.tagStrong}>{statusLabel(product.status)}</span>}
+        <span className={styles.tag}>{product.tradeType === "DIRECT" ? "직거래" : "택배거래"}</span>
+      </p>
+      {/* 사는 사람은 가격을 아래 고정 바에서 본다. 내 상품에는 바가 없어 여기 둔다. */}
+      {product.isMine && <p className={styles.price}><span>{formatPrice(product.price)}</span>
+        {product.isNegotiable && <small className={styles.negotiable}>가격 제안 가능</small>}</p>}
+      <p className={styles.description}>{product.description}</p>
+      <p className={styles.detailMeta}>조회 {product.viewCount} · 채팅 {product.chatCount} · 관심 {product.favoriteCount}</p>
+      {/* 신고는 드문 동작이라 조용한 글자 링크로 둔다. 판매자 신고·차단은 프로필에서 한다. */}
       {!product.isMine && <button type="button" className={styles.reportLink} onClick={() => onReport(product)}>
         이 게시글 신고하기</button>}
-      {product.isMine && <p className={styles.note}>관심 {product.favoriteCount}</p>}
-      {product.isMine && <section aria-label="내 상품 관리">
+
+      {product.isMine && <section className={styles.manage} aria-label="내 상품 관리">
         {error && <p className={styles.error} role="alert">{error}</p>}
-        <div className={styles.actions}>
-          {product.status !== "SOLD" && <>
+        {/* 상태는 셋 중 하나를 고르는 것이라 버튼 셋 대신 한 줄 선택이다. 판매완료는 되돌릴 수 없어 확인을 받는다. */}
+        <div className="seg" role="group" aria-label="판매 상태">
+          {STATUS_OPTIONS.map((option) => <button key={option.value} type="button" className="seg-item"
+            aria-pressed={product.status === option.value}
+            disabled={pending !== "" || product.status === "SOLD" || product.status === option.value}
+            onClick={() => {
+              if (option.value === "SOLD" && !window.confirm("판매완료로 변경할까요? 판매중으로 되돌릴 수 없습니다.")) return;
+              act("status", option.value);
+            }}>{option.label}</button>)}
+        </div>
+        {product.status !== "SOLD" && <>
+          <div className={styles.actions}>
             <button className={styles.secondary} disabled={pending !== ""} onClick={() => onEdit(product)}>수정하기</button>
             <button className={styles.secondary} disabled={pending !== ""} onClick={() => act("bump")}>끌어올리기</button>
-            <button className={styles.secondary} disabled={pending !== ""} onClick={() => act("status", product.status === "ON_SALE" ? "RESERVED" : "ON_SALE")}>{product.status === "ON_SALE" ? "예약중으로 변경" : "판매중으로 변경"}</button>
-            <button className={styles.secondary} disabled={pending !== ""} onClick={() => {
-              if (window.confirm("판매완료로 변경할까요? 판매중으로 되돌릴 수 없습니다.")) act("status", "SOLD");
-            }}>판매완료로 변경</button>
-          </>}
-          <button className={styles.secondary} disabled={pending !== ""} onClick={() => act("delete")}>삭제하기</button>
-        </div>
-        {product.status !== "SOLD" && <p className={styles.note}>끌어올리기는 등록 또는 마지막 끌어올리기 후 24시간마다 가능해요.</p>}
+          </div>
+          <p className={styles.note}>끌어올리기는 등록 또는 마지막 끌어올리기 후 24시간마다 가능해요.</p>
+        </>}
+        {/* 삭제는 드물고 되돌릴 수 없어 버튼 줄에서 빼 맨 아래 위험 색 글자로 둔다. */}
+        <button type="button" className={styles.deleteLink} disabled={pending !== ""} onClick={() => act("delete")}>상품 삭제하기</button>
       </section>}
+
+      {/* 사는 사람이 할 일은 찜과 채팅 둘이다. 설명이 길어도 늘 보이게 화면 아래에 붙인다. */}
+      {!product.isMine && <div className={styles.buyBar}>
+        {error && <p className={styles.buyError} role="alert">{error}</p>}
+        <button className={styles.buyLike + (product.isLiked ? " " + styles.buyLikeOn : "")}
+          disabled={pending === "favorite"} onClick={favorite} aria-pressed={product.isLiked}
+          aria-label={`관심 ${product.favoriteCount}`}>
+          <Icon name="heart" size={22} filled={product.isLiked} />
+        </button>
+        <div className={styles.buyPrice}>
+          <strong>{formatPrice(product.price)}</strong>
+          <span>{product.isNegotiable ? "가격 제안 가능" : "가격 제안 불가"}</span>
+        </div>
+        <button className={styles.primary} disabled={pending === "chat"} onClick={startChat}>{pending === "chat" ? "여는 중…" : "채팅하기"}</button>
+      </div>}
       {zoomed && image && <Lightbox images={product.images} index={index} title={product.title}
         onMove={setIndex} onClose={() => setZoomed(false)} />}
     </>}

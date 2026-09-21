@@ -561,7 +561,8 @@ export default function App() {
         <div>
           <h1 className={styles.title}>{region ? region.dong + "의 이웃 물건" : "우리 동네에서 발견하는 좋은 물건"}</h1>
           {/* 동네를 안 고른 상태의 안내는 아래 빈 상태가 하므로 여기서 또 적지 않는다. */}
-          {region && <p className={styles.sub}>{keyword ? keyword + " 검색 · " : ""}불러온 상품 {feed.items.length}개</p>}
+          {/* 불러온 개수는 무한 스크롤에서 계속 바뀌어 뜻이 없다. 검색 중일 때만 무엇을 찾는지 알린다. */}
+          {region && keyword && <p className={styles.sub}>"{keyword}" 검색 결과</p>}
         </div>
         <label className={styles.sortLabel}>정렬<select className={styles.sortBtn} value={sort} onChange={(e) => changeHomeQuery({ sort: e.target.value })} aria-label="상품 정렬">
           <option value="LATEST">최신순</option><option value="PRICE_ASC">낮은 가격순</option>

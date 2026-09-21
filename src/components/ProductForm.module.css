@@ -6,6 +6,11 @@
 .fields .check { display: flex; align-items: center; }
 .check input { width: auto; }
 .label { font-weight: 600; }
+.group { display: grid; gap: 8px; }
+/* 가격 칸 오른쪽에 "원"을 붙인다. 입력칸 안처럼 보이게 겹쳐 둔다. */
+.money { position: relative; display: block; }
+.money input { padding-right: 36px; font-variant-numeric: tabular-nums; }
+.money span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-3); font-weight: 400; pointer-events: none; }
 
 /* 카메라 타일. 사진 칸과 같은 정사각형이라 목록 첫 칸에 자연스럽게 놓인다. */
 .picker {

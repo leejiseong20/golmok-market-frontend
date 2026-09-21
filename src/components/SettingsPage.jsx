@@ -29,9 +29,9 @@ function ThemeSetting() {
       <strong>화면 모드</strong>
       <span>{chosen ? "이 기기에서 직접 고른 화면이에요." : `기기 설정을 따라요(지금 ${effective === "dark" ? "어두운" : "밝은"} 화면).`}</span>
     </div>
-    <div className={styles.segment} role="group" aria-label="화면 모드 고르기">
+    <div className="seg" role="group" aria-label="화면 모드 고르기">
       {THEME_OPTIONS.map((option) => <button key={option.label} type="button" aria-pressed={chosen === option.value}
-        className={styles.segmentItem + (chosen === option.value ? " " + styles.segmentOn : "")}
+        className="seg-item"
         onClick={() => theme.set(option.value)}>{option.label}</button>)}
     </div>
   </section>;

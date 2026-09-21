@@ -112,14 +112,64 @@
   .pager .pagerArrow { display: none; }
   .pager { margin: var(--s2) 0; }
 }
-.productTitle { font-size: 24px; margin: 18px 0 8px; overflow-wrap: anywhere; }
+.productTitle { font-size: 22px; margin: var(--s4) 0 var(--s1); overflow-wrap: anywhere; }
 .price { font-size: 26px; font-weight: 700; margin: 12px 0; }
 .description { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; margin: 20px 0; }
-.seller { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; display: flex; align-items: center; gap: 12px; }
+/* 상품 상세 판매자 줄. 사진 바로 아래, 아래쪽 구분선으로 본문과 나눈다. */
+.seller { border-bottom: 1px solid var(--line); padding: var(--s4) 0; display: flex; align-items: center; gap: 12px; }
 .sellerInfo { display: grid; gap: 4px; min-width: 0; }
 .seller button { justify-self: start; padding: 0; border: 0; background: none; color: var(--ink); font-size: inherit; }
 .seller button:hover { color: var(--accent); }
 .tag { display: inline-block; padding: 5px 10px; border-radius: 8px; background: var(--surface-2); font-size: 13px; margin-right: 8px; }
+.tagStrong { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.tags { margin: var(--s3) 0 0; }
+/* 카테고리·동네·시간, 조회·채팅·관심을 각각 한 줄로 모은다. */
+.detailMeta { color: var(--ink-4); font-size: var(--fs-sm); line-height: 1.6; }
+.negotiable { display: block; margin-top: var(--s1); font-size: var(--fs-sm); font-weight: 400; color: var(--ink-4); }
+
+/* 내 상품 관리. 판매 상태 한 줄 → 수정·끌어올리기 → 맨 아래 삭제 글자. */
+.manage { display: grid; gap: var(--s3); margin-top: var(--s5); padding-top: var(--s5); border-top: 1px solid var(--line); }
+.manage .actions { margin: 0; }
+.manage .note { margin: 0; }
+.deleteLink { justify-self: start; padding: var(--s1) 0; border: 0; background: none; color: var(--danger); font: inherit; font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 3px; }
+.deleteLink:disabled { opacity: 0.5; }
+
+/*
+ * 사는 사람의 고정 바(찜 · 가격 · 채팅하기). 모달의 스크롤 영역 맨 아래에 붙는다(sticky).
+ * 모달 안쪽 여백을 음수 여백으로 상쇄해 가장자리까지 채운다.
+ */
+.buyBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+  margin: var(--s6) calc(var(--s6) * -1) calc(var(--s6) * -1);
+  padding: var(--s3) var(--s6) var(--s6);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.buyBar .primary { min-width: 112px; }
+.buyError { flex-basis: 100%; margin: 0; color: var(--danger); font-size: var(--fs-sm); }
+.buyLike { display: grid; place-items: center; flex-shrink: 0; width: var(--control); height: var(--control); padding: 0; border: 0; border-radius: 50%; background: none; color: var(--ink-3); }
+.buyLike:hover:not(:disabled) { background: var(--surface-2); }
+.buyLike:hover:not(:disabled) { color: var(--accent); }
+.buyLikeOn { color: var(--accent); }
+.buyPrice { flex: 1; min-width: 0; display: grid; padding-left: var(--s3); border-left: 1px solid var(--line); }
+.buyPrice strong { font-size: var(--fs-title); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.buyPrice span { font-size: var(--fs-caption); color: var(--ink-4); }
+@media (max-width: 879px) {
+  /* 설명이 짧아도 바가 화면 중간에 뜨지 않고 맨 아래에 붙게 한다(전체 시트라 높이가 화면 전체다). */
+  .content:has(> .buyBar) { display: flex; flex-direction: column; min-height: 100%; }
+  .content:has(> .buyBar) > .buyBar { margin-top: auto; }
+  .content:has(> .buyBar) > .reportLink { align-self: flex-start; margin-bottom: var(--s5); }
+  .buyBar {
+    margin: var(--s5) calc(var(--s4) * -1) calc((var(--s8) + env(safe-area-inset-bottom, 0px)) * -1);
+    padding: var(--s3) var(--s4) calc(var(--s3) + env(safe-area-inset-bottom, 0px));
+  }
+}
 
 /* 로그인 상태 유지 체크박스. 설명은 같은 줄 오른쪽에 조용히 붙인다. */
 .remember { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-sm); color: var(--ink-2); }

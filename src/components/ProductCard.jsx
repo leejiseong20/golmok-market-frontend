@@ -41,16 +41,17 @@ export default function ProductCard({ product, onOpen, onToggleFavorite }) {
           {product.status !== "ON_SALE" && <span className={styles.badge}>{statusLabel(product.status)}</span>}
           {product.regionName} · {relativeTime(product.bumpedAt)}
         </p>
-        <div className={styles.counts}>
-          <span className={styles.count + (product.isLiked ? " " + styles.liked : "")}>
+        {/* 0 은 숨긴다. 대부분의 상품이 0 이라 정보 없이 줄만 차지했다. */}
+        {(product.favoriteCount > 0 || product.chatCount > 0) && <div className={styles.counts}>
+          {product.favoriteCount > 0 && <span className={styles.count + (product.isLiked ? " " + styles.liked : "")}>
             <Icon name="heart" size={14} filled={product.isLiked} />
             <span className="sr-only">관심 </span>{product.favoriteCount}
-          </span>
-          <span className={styles.count}>
+          </span>}
+          {product.chatCount > 0 && <span className={styles.count}>
             <Icon name="chat" size={14} />
             <span className="sr-only">채팅 </span>{product.chatCount}
-          </span>
-        </div>
+          </span>}
+        </div>}
       </div>
     </button>
     {onToggleFavorite && <button type="button" onClick={toggle} disabled={pending}

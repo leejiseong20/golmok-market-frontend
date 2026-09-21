@@ -33,7 +33,7 @@ test("실제 서버에서 사진 업로드부터 등록 수정 판매내역 상�
     const form = page.getByRole("dialog", { name: "상품 등록", exact: true });
     await form.getByLabel("제목", { exact: true }).fill(`등록검증 ${tag}`);
     await form.getByLabel("설명", { exact: true }).fill("실제 서버와 연결해서 등록한 검증용 상품입니다.");
-    await form.getByLabel("가격 (원)", { exact: true }).fill("18000");
+    await form.getByLabel("가격", { exact: true }).fill("18000");
     await form.getByRole("combobox", { name: "카테고리", exact: true }).selectOption({ index: 1 });
     await form.locator('input[type="file"]').setInputFiles([
       { name: "검증사진1.png", mimeType: "image/png", buffer: photo },
@@ -56,13 +56,14 @@ test("실제 서버에서 사진 업로드부터 등록 수정 판매내역 상�
     await detail.getByRole("button", { name: "수정하기", exact: true }).click();
     const edit = page.getByRole("dialog", { name: "상품 수정", exact: true });
     await edit.getByLabel("제목", { exact: true }).fill(`수정검증 ${tag}`);
-    await edit.getByLabel("가격 (원)", { exact: true }).fill("12000");
+    await edit.getByLabel("가격", { exact: true }).fill("12000");
     await edit.getByRole("button", { name: "사진 2 삭제", exact: true }).click();
     await edit.getByRole("button", { name: "수정 완료", exact: true }).click();
     await expect(detail.getByText(`수정검증 ${tag}`, { exact: true })).toBeVisible();
     await expect(detail.getByText("12,000원", { exact: true })).toBeVisible();
-    await detail.getByRole("button", { name: "예약중으로 변경", exact: true }).click();
-    await expect(detail.getByRole("button", { name: "판매중으로 변경", exact: true })).toBeVisible();
+    const status = detail.getByRole("group", { name: "판매 상태", exact: true });
+    await status.getByRole("button", { name: "예약중", exact: true }).click();
+    await expect(status.getByRole("button", { name: "예약중", exact: true })).toHaveAttribute("aria-pressed", "true");
     await detail.getByRole("button", { name: "닫기", exact: true }).click();
     await page.getByRole("button", { name: "나의 골목", exact: true }).first().click();
     await page.getByRole("tab", { name: "판매내역", exact: true }).click();
@@ -74,10 +75,10 @@ test("실제 서버에서 사진 업로드부터 등록 수정 판매내역 상�
     await expect(page.getByRole("button", { name: `수정검증 ${tag} 상세 보기`, exact: true })).toBeVisible();
     await page.screenshot({ path: info.outputPath("판매내역.png"), fullPage: true });
     await page.getByRole("button", { name: `수정검증 ${tag} 상세 보기`, exact: true }).click();
-    await detail.getByRole("button", { name: "판매완료로 변경", exact: true }).click();
+    await detail.getByRole("group", { name: "판매 상태", exact: true }).getByRole("button", { name: "판매완료", exact: true }).click();
     await expect(detail.getByRole("button", { name: "수정하기", exact: true })).toHaveCount(0);
     await detail.screenshot({ path: info.outputPath("판매완료.png") });
-    await detail.getByRole("button", { name: "삭제하기", exact: true }).click();
+    await detail.getByRole("button", { name: "상품 삭제하기", exact: true }).click();
     await expect(detail).not.toBeVisible();
     await page.getByRole("combobox", { name: "판매 상태", exact: true }).selectOption("");
     await expect(page.getByText("조건에 맞는 판매 상품이 없어요.", { exact: true })).toBeVisible();
