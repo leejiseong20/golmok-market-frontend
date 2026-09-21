@@ -66,9 +66,20 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
       if (error.name === "AbortError") throw error;
       throw new ApiError("서버에 연결할 수 없습니다. 연결 상태를 확인하고 다시 시도해 주세요.");
     }
-    if (response.status === 204) return null;
+    /*
+     * 본문이 비어 있으면 null 이다. 204 만 비어 있는 것이 아니다 — 차단(POST)은 201 에 본문이 없다.
+     * 예전에는 204 만 따로 보고 나머지는 JSON 으로 읽어서, 성공한 차단이 "응답을 확인할 수 없습니다" 오류가 됐다.
+     * 그래서 글자로 먼저 받고, 비어 있지 않을 때만 JSON 으로 읽는다.
+     */
+    let text;
+    try { text = await response.text(); }
+    catch { text = ""; }
+    if (!text) {
+      if (response.ok) return null;
+      throw new ApiError("요청을 처리하지 못했습니다.", { status: response.status, code: "INVALID_RESPONSE" });
+    }
     let data;
-    try { data = await response.json(); }
+    try { data = JSON.parse(text); }
     catch {
       throw new ApiError("서버 응답을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.", { status: response.status, code: "INVALID_RESPONSE" });
     }

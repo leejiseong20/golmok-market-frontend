@@ -12,6 +12,7 @@ import ProductForm from "./components/ProductForm.jsx";
 import MyPage from "./components/MyPage.jsx";
 import ChatPage from "./components/ChatPage.jsx";
 import UserProfile from "./components/UserProfile.jsx";
+import ReportForm from "./components/ReportForm.jsx";
 import NotificationPanel from "./components/NotificationPanel.jsx";
 import NotFound from "./components/NotFound.jsx";
 import Toaster from "./components/Toaster.jsx";
@@ -23,6 +24,7 @@ import { chatSocket } from "./api/chatSocket.js";
 import { fetchChatUnreadCount, openChatRoom } from "./api/chatApi.js";
 import { fetchUnreadCount } from "./api/notificationApi.js";
 import { logout } from "./api/authApi.js";
+import { blockConfirmText, blockUser, unblockUser } from "./api/blockApi.js";
 import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavorite } from "./api/productApi.js";
 import { homeSearch, isAppPath, MY_TABS, parseHomeQuery, parseId, paths } from "./routes.js";
 import { theme } from "./theme.js";
@@ -98,6 +100,8 @@ export default function App() {
   const [detailRetry, setDetailRetry] = useState(0);
   const [editor, setEditor] = useState(null);
   const [productRevision, setProductRevision] = useState(0);
+  // 신고 창에 넘길 대상. 상세·프로필·채팅방 어디서 열든 창은 하나다.
+  const [reporting, setReporting] = useState(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const feedVersion = useRef(0);
   const moreController = useRef(null);
@@ -444,6 +448,46 @@ export default function App() {
     finally { logoutPending.current = false; setLoggingOut(false); }
   }
   const login = () => setModal("auth");
+
+  /** 신고 창을 연다. 로그인해야 신고할 수 있다(누가 신고했는지 기록해야 중복을 막는다). */
+  function openReport(target) {
+    if (!user) { setModal("auth"); return; }
+    setReporting(target);
+  }
+  /**
+   * 차단·해제 뒤에는 목록과 뱃지가 달라진다(그 사람 상품·그 사람과의 방이 빠지거나 돌아온다).
+   * 화면에서 항목을 직접 지우지 않고 서버에 다시 묻는다(찜과 같은 이유).
+   */
+  function blocksChanged() {
+    setRetry((value) => value + 1);
+    setProductRevision((value) => value + 1);
+    reloadChatUnread.current();
+  }
+  /** 차단. 되돌릴 수 있지만 채팅이 바로 끊기므로 한 번 묻는다. 성공하면 true. */
+  async function blockPerson({ id, nickname }) {
+    if (!user) { setModal("auth"); return false; }
+    if (!window.confirm(blockConfirmText(nickname))) return false;
+    try {
+      await blockUser(id);
+      toast.success(`${nickname}님을 차단했어요.`);
+    } catch (error) {
+      // 다른 기기에서 이미 차단했다면 바라던 결과는 이미 있다.
+      if (error.code !== "ALREADY_BLOCKED") { toast.error(error.message); return false; }
+    }
+    blocksChanged();
+    return true;
+  }
+  async function unblockPerson({ id, nickname }) {
+    try {
+      await unblockUser(id);
+      toast.show(`${nickname}님 차단을 해제했어요.`);
+      blocksChanged();
+      return true;
+    } catch (error) {
+      toast.error(error.message);
+      return false;
+    }
+  }
   const goHome = () => go(paths.home);
   const navigation = { user, view, loggingOut, chatUnreadCount, onLogin: login, onLogout: signOut,
     onHome: goHome, onMyPage: () => go(paths.my()), onChat: () => go(paths.chat),
@@ -496,11 +540,13 @@ export default function App() {
     <Sidebar onRegionClick={navigation.onRegionClick} onKeyword={(value) => changeHomeQuery({ keyword: value })} />
   </main>;
   const chatScreen = <ChatScreen user={user} onHome={goHome} onLogin={login} onSelectRoom={selectRoom}
-    onOpenProduct={openProduct} onOpenProfile={openProfile} />;
+    onOpenProduct={openProduct} onOpenProfile={openProfile}
+    onReport={(person) => openReport({ targetType: "USER", targetId: person.id, targetName: person.nickname, blockTarget: person })}
+    onBlock={blockPerson} />;
   const myScreen = <MyScreen user={user} onHome={goHome} onTabChange={(tab) => goTo(paths.my(tab))}
     onLogout={signOut} loggingOut={loggingOut}
     refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite}
-    onRegionsChange={applyPrimaryRegion} onLogin={login} />;
+    onRegionsChange={applyPrimaryRegion} onLogin={login} onBlocksChanged={blocksChanged} />;
 
   return <>
     <a className="skip-link btn btn-primary btn-sm" href="#main">본문 바로가기</a>
@@ -538,9 +584,18 @@ export default function App() {
       onEdit={(product) => { setEditor({ product }); closeModal(); }} onChanged={detailChanged} onStartChat={startChat}
       onToggleFavorite={favoriteFromDetail}
       onOpenProfile={openProfile}
+      onReport={(product) => openReport({ targetType: "PRODUCT", targetId: product.id, targetName: product.title,
+        blockTarget: { id: product.seller.id, nickname: product.seller.nickname } })}
       onDeleted={() => { setProductRevision((v) => v + 1); setRetry((v) => v + 1); closeModal(); }} />}
     {editor && <ProductForm key={editor.product?.id ?? "new"} product={editor.product} categories={categories}
       onClose={() => setEditor(null)} onVerifyRegion={() => go(paths.my())} onSaved={productSaved} />}
-    {profileId && <UserProfile key={profileId} userId={profileId} onClose={closeModal} />}
+    {profileId && <UserProfile key={profileId} userId={profileId} me={user?.id ?? null} onClose={closeModal}
+      onReport={(person) => openReport({ targetType: "USER", targetId: person.id, targetName: person.nickname, blockTarget: person })}
+      onBlock={blockPerson} onUnblock={unblockPerson} />}
+    {reporting && <ReportForm key={`${reporting.targetType}-${reporting.targetId}`}
+      targetType={reporting.targetType} targetId={reporting.targetId} targetName={reporting.targetName}
+      onClose={() => setReporting(null)}
+      onBlock={reporting.blockTarget && reporting.blockTarget.id !== user?.id
+        ? async () => { if (await blockPerson(reporting.blockTarget)) setReporting(null); } : undefined} />}
   </>;
 }

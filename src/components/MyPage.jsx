@@ -7,6 +7,7 @@ import ReviewList from "./ReviewList.jsx";
 import Avatar from "./Avatar.jsx";
 import ProfileForm from "./ProfileForm.jsx";
 import WithdrawForm from "./WithdrawForm.jsx";
+import BlockedUsers from "./BlockedUsers.jsx";
 import EmptyState from "./EmptyState.jsx";
 import { BlockListSkeleton, ProductListSkeleton } from "./Skeleton.jsx";
 import { client } from "../api/client.js";
@@ -33,7 +34,7 @@ const emptyList = { tab: null, items: [], cursor: null, hasNext: false, loading:
  * 목록에 어느 탭의 데이터인지(list.tab)를 함께 둔다. 뒤로가기로 탭이 바뀌면 effect 가 새 데이터를 받기 전에
  * 한 번 렌더링되는데, 이때 이전 탭 항목을 새 탭의 카드로 그리면 형태가 달라 터진다. 탭이 다르면 비어 있는 것으로 본다.
  */
-export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggleFavorite, onLogin, onLogout, loggingOut, onHome, onRegionsChange, refreshKey = 0 }) {
+export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggleFavorite, onLogin, onLogout, loggingOut, onHome, onRegionsChange, onBlocksChanged, refreshKey = 0 }) {
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
   const [loaded, setList] = useState(emptyList);
@@ -43,6 +44,7 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
   const [review, setReview] = useState(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [blocksOpen, setBlocksOpen] = useState(false);
   const moreController = useRef(null);
   const morePending = useRef(false);
   const list = loaded.tab === tab ? loaded : { ...emptyList, tab };
@@ -192,8 +194,10 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
     {profile && <div className={styles.account}>
       <button className="btn btn-outline btn-sm" onClick={onLogout} disabled={loggingOut}>
         {loggingOut ? "처리 중…" : "로그아웃"}</button>
+      <button className={styles.withdraw} onClick={() => setBlocksOpen(true)}>차단한 사용자</button>
       <button className={styles.withdraw} onClick={() => setWithdrawing(true)}>회원 탈퇴</button>
     </div>}
+    {blocksOpen && <BlockedUsers onClose={() => setBlocksOpen(false)} onChanged={onBlocksChanged} />}
     {withdrawing && <WithdrawForm onClose={() => setWithdrawing(false)} onWithdrawn={() => {
       // 서버가 refresh token 을 모두 지웠으므로 이 기기의 세션만 지우면 된다. 홈으로 먼저 옮겨 빈 마이페이지를 거치지 않는다.
       onHome();

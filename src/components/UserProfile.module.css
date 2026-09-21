@@ -3,3 +3,10 @@
 .profile strong { color: var(--accent); }
 .profile p { color: var(--ink-4); font-size: 14px; margin-bottom: 0; }
 .avatar { display: block; margin-bottom: 12px; }
+
+/*
+ * 신고·차단은 자주 쓰는 동작이 아니라 후기 목록 아래에 조용히 둔다.
+ * 프로필을 열자마자 "신고"가 크게 보이면 이웃을 의심하는 화면처럼 읽힌다.
+ */
+.actions { display: flex; justify-content: flex-end; gap: var(--s2); margin-top: var(--s5); padding-top: var(--s3); border-top: 1px solid var(--line); }
+.profile .blockedNote { margin-top: var(--s3); padding: var(--s3); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-sm); line-height: 1.6; }

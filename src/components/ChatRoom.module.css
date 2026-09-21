@@ -150,3 +150,11 @@
   overflow-wrap: anywhere;
 }
 .system time { margin-left: 4px; font-size: 11px; color: var(--ink-4); }
+
+/* 신고·차단 메뉴. 헤더 오른쪽 "나가기" 옆의 점 세 개 버튼에서 아래로 펼친다. */
+.menuWrap { position: relative; flex-shrink: 0; }
+.more { display: grid; place-items: center; width: var(--control-sm); height: var(--control-sm); padding: 0; border: 0; border-radius: 50%; background: none; color: var(--ink-3); }
+.more:hover, .more[aria-expanded="true"] { background: var(--surface-2); color: var(--ink); }
+.menu { position: absolute; top: calc(100% + var(--s1)); right: 0; z-index: 5; display: grid; min-width: 132px; padding: var(--s1); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-2); }
+.menu button { padding: var(--s2) var(--s3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-2); font: inherit; font-size: var(--fs-sm); text-align: left; white-space: nowrap; }
+.menu button:hover, .menu button:focus-visible { background: var(--surface-2); color: var(--ink); }

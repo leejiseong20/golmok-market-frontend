@@ -1,0 +1,5 @@
+.note { margin: 0 0 var(--s4); font-size: var(--fs-sm); line-height: 1.6; color: var(--ink-4); }
+.list { display: grid; margin: 0; padding: 0; list-style: none; }
+.row { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) 0; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

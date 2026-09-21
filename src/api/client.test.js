@@ -241,3 +241,18 @@ test("유지를 껐다가 켜면 이전 저장소에 세션이 남지 않는다"
   assert.equal(tab.getItem(), null);
   assert.ok(keep.getItem());
 });
+
+test("본문이 없는 성공 응답은 204 가 아니어도 null 이다(차단은 201 에 본문이 없다)", async () => {
+  const client = createApiClient({ fetchImpl: async () => new Response(null, { status: 201 }) });
+  assert.equal(await client.request("/users/8/block", { method: "POST", auth: false }), null);
+});
+
+test("본문이 없는 실패 응답은 성공으로 넘기지 않는다", async () => {
+  const client = createApiClient({ fetchImpl: async () => new Response(null, { status: 502 }) });
+  await assert.rejects(client.request("/products", { auth: false }), { status: 502, code: "INVALID_RESPONSE" });
+});
+
+test("JSON 이 아닌 본문(프록시 오류 페이지 등)은 확인할 수 없는 응답으로 알린다", async () => {
+  const client = createApiClient({ fetchImpl: async () => new Response("<html>Bad Gateway</html>", { status: 502 }) });
+  await assert.rejects(client.request("/products", { auth: false }), { code: "INVALID_RESPONSE" });
+});

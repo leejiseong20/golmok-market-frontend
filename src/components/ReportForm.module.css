@@ -1,0 +1,17 @@
+.form { display: grid; gap: var(--s4); color: var(--ink); }
+.form p { margin: 0; line-height: 1.6; }
+.form label { display: grid; gap: var(--s2); font-weight: 600; }
+.form textarea { width: 100%; box-sizing: border-box; padding: var(--s3); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--field); color: var(--ink); font: inherit; resize: vertical; }
+
+/* 사유는 한 번에 훑어볼 수 있게 한 줄씩 늘어놓는다. 선택지가 다섯 개라 드롭다운보다 빠르다. */
+.reasons { display: grid; gap: var(--s1); margin: 0; padding: 0; border: 0; min-width: 0; }
+.form .reason { display: flex; align-items: center; gap: var(--s3); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--radius-sm); font-weight: 500; cursor: pointer; }
+.form .reason:has(input:checked) { border-color: var(--accent-border); background: var(--accent-soft); }
+.reason input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+
+.hint { font-size: var(--fs-sm); line-height: 1.6; color: var(--ink-4); }
+.error { color: var(--danger); }
+.actions { display: flex; gap: var(--s2); }
+.actions > * { flex: 1; }
+.submit { composes: btn btn-primary btn-lg btn-block from global; }
+.secondary { composes: btn btn-outline btn-lg from global; }

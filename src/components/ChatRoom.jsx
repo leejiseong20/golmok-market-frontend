@@ -4,6 +4,7 @@ import {
 } from "../api/chatApi.js";
 import { chatSocket } from "../api/chatSocket.js";
 import Avatar from "./Avatar.jsx";
+import Icon from "./Icon.jsx";
 import ReviewForm from "./ReviewForm.jsx";
 import { toast } from "../toast.js";
 import { formatChatDay, formatChatTime, formatPrice, statusLabel, tradeStatusLabel } from "../data/format.js";
@@ -34,8 +35,10 @@ const dayOf = (value) => value?.slice(0, 10);
  * 이미 불러온 이전 메시지와 이어 붙이지 않고 바꾸는 이유: 끊긴 동안 메시지가 한 페이지보다 많이 오면
  * 중간이 빈 채로 이어 붙게 된다.
  */
-export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, onOpenProfile }) {
+export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, onOpenProfile, onReport, onBlock }) {
   const [reviewing, setReviewing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const [info, setInfo] = useState({ data: null, loading: true, error: "" });
   const [messages, setMessages] = useState(emptyMessages);
   const [reload, setReload] = useState(0);
@@ -59,6 +62,16 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
   const read = useRef({ pending: false, again: false });
 
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+
+  /** 신고·차단 메뉴는 바깥을 누르거나 Esc 를 누르면 닫는다. 열려 있을 때만 듣는다. */
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const closeOutside = (event) => { if (!menuRef.current?.contains(event.target)) setMenuOpen(false); };
+    const closeOnEscape = (event) => { if (event.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => { document.removeEventListener("pointerdown", closeOutside); document.removeEventListener("keydown", closeOnEscape); };
+  }, [menuOpen]);
 
   function markReadIfVisible() {
     if (document.visibilityState !== "visible") return;
@@ -300,6 +313,18 @@ export default function ChatRoom({ roomId, me, onBack, onLeft, onOpenProduct, on
           <strong>{room?.opponent.nickname ?? "…"}</strong></button>
         {room && <span>매너온도 {Number(room.opponent.mannerTemp).toFixed(1)}°C</span>}
       </div>
+      {/*
+        신고·차단은 채팅방에서 가장 필요하다(사기는 대화에서 드러난다). 헤더를 어지럽히지 않게 메뉴 하나에 모은다.
+        탈퇴한 상대는 신고·차단할 대상이 없다(서버도 없는 사용자로 본다).
+      */}
+      {room && !withdrawn && <div className={styles.menuWrap} ref={menuRef}>
+        <button className={styles.more} aria-label="신고·차단 메뉴" aria-haspopup="menu" aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}><Icon name="more" size={20} filled /></button>
+        {menuOpen && <div className={styles.menu} role="menu">
+          <button role="menuitem" onClick={() => { setMenuOpen(false); onReport(room.opponent); }}>신고하기</button>
+          <button role="menuitem" onClick={() => { setMenuOpen(false); onBlock(room.opponent); }}>차단하기</button>
+        </div>}
+      </div>}
       <button className={styles.leave} onClick={leave} disabled={leaving || !room}>{leaving ? "나가는 중…" : "나가기"}</button>
     </header>
 

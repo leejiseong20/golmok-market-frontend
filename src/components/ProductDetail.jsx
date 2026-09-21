@@ -8,7 +8,7 @@ import Modal from "./Modal.jsx";
 import { toast } from "../toast.js";
 import styles from "./Modal.module.css";
 
-export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChanged, onDeleted, onStartChat, onOpenProfile, onToggleFavorite }) {
+export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChanged, onDeleted, onStartChat, onOpenProfile, onToggleFavorite, onReport }) {
   const [index, setIndex] = useState(0);
   const [zoomed, setZoomed] = useState(false);
   const [failedImage, setFailedImage] = useState(null);
@@ -104,6 +104,9 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
           </button>
         </div>
       </section>}
+      {/* 신고는 드문 동작이라 버튼 줄 아래 조용한 글자 링크로 둔다. 판매자 신고·차단은 프로필에서 한다. */}
+      {!product.isMine && <button type="button" className={styles.reportLink} onClick={() => onReport(product)}>
+        이 게시글 신고하기</button>}
       {product.isMine && <p className={styles.note}>관심 {product.favoriteCount}</p>}
       {product.isMine && <section aria-label="내 상품 관리">
         {error && <p className={styles.error} role="alert">{error}</p>}
