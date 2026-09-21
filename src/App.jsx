@@ -563,6 +563,7 @@ export default function App() {
     onOpenProduct={openProduct} onOpenProfile={openProfile}
     onReport={(person) => openReport({ targetType: "USER", targetId: person.id, targetName: person.nickname, blockTarget: person })}
     onBlock={blockPerson} />;
+  const showWriteButton = view === "home";
   const myScreen = <MyScreen user={user} onHome={goHome} onTabChange={(tab) => goTo(paths.my(tab))}
     refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite}
     onLogin={login} onOpenSettings={() => goTo(paths.settings)} />;
@@ -599,10 +600,13 @@ export default function App() {
       <Route path="*" element={<NotFound onHome={goHome} />} />
     </Routes>
     <BottomNav {...navigation} />
-    {/* 채팅 화면에서는 떠 있는 등록 버튼이 입력창의 전송 버튼을 가린다. */}
-    {view !== "chat" && <button className={styles.writeButton} onClick={writeProduct} aria-label="상품 등록">
+    {/*
+      상품 등록 버튼은 홈에서만 띄운다. 채팅에서는 전송 버튼을 가리고, 나의 골목·설정에서는 쓸 일이 없다.
+      버튼이 뜬 화면에서는 footer 아래에 버튼 자리를 비워 둔다(맨 아래까지 내리면 footer 글자를 가렸다).
+    */}
+    {showWriteButton && <button className={styles.writeButton} onClick={writeProduct} aria-label="상품 등록">
       <span className={styles.writeIcon} aria-hidden="true">＋</span><span className={styles.writeLabel}>상품 등록</span></button>}
-    <footer className={styles.footer + " " + styles.pcOnly}><div className={styles.footerInner}><span>골목마켓 · 동네 기반 중고거래 플랫폼</span><span>이웃의 물건에 새로운 일상을</span></div></footer>
+    <footer className={styles.footer + " " + styles.pcOnly + (showWriteButton ? " " + styles.footerClear : "")}><div className={styles.footerInner}><span>골목마켓 · 동네 기반 중고거래 플랫폼</span><span>이웃의 물건에 새로운 일상을</span></div></footer>
     {modal === "auth" && <AuthModal onClose={() => setModal(null)} />}
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
     {modal === "notifications" && user && <NotificationPanel onClose={() => setModal(null)} onNavigate={openNotificationTarget}

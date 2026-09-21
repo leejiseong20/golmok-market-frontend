@@ -63,6 +63,12 @@
 .more { margin-top: var(--s6); }
 
 .footer { border-top: 1px solid var(--line); background: var(--surface); }
+/*
+ * 떠 있는 "상품 등록" 버튼(PC: 화면 아래 32px, 높이 52px)이 보이는 화면에서는
+ * footer 아래에 버튼 자리를 비워 둔다. 맨 아래까지 내렸을 때 footer 글자가 버튼 위에 오고,
+ * 버튼은 빈 여백 위에 뜬다(비우지 않으면 오른쪽 글자를 가렸다).
+ */
+.footerClear .footerInner { padding-bottom: calc(var(--s7) + 52px + var(--s5)); }
 
 .footerInner {
   max-width: var(--shell-max);
