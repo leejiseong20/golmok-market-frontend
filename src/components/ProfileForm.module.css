@@ -12,3 +12,5 @@
 .fieldError { font-size: var(--fs-sm); font-weight: 400; color: var(--danger); }
 .error { color: var(--danger); background: var(--danger-bg); border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.6; }
 .primary { composes: btn btn-primary btn-lg btn-block from global; }
+/* 사진을 고르고 돌아오면 숨긴 파일 입력에 초점이 남는다. 손가락·마우스로 쓰는 중이면 링을 그리지 않는다(inputMode.js). */
+:global(html[data-input="pointer"]) .secondary:focus-within { outline: none; }

@@ -178,6 +178,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/*
+ * 손가락·마우스로 쓰는 동안에는 버튼·링크의 초점 링을 그리지 않는다(inputMode.js).
+ * 창을 열 때 브라우저가 닫기 버튼으로 옮긴 초점에 iOS 가 링을 그려, 누르지도 않은 버튼이 눌린 것처럼 보였다.
+ * 입력칸·선택칸은 그대로 둔다(쓰는 곳은 어느 방식이든 보여야 한다). Tab 을 누르면 다시 보인다.
+ */
+html[data-input="pointer"] :is(button, a, [tabindex]):focus-visible { outline: none; }
 input, select { font-family: inherit; }
 
 /**
