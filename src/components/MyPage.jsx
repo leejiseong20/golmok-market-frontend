@@ -8,6 +8,7 @@ import Avatar from "./Avatar.jsx";
 import ProfileForm from "./ProfileForm.jsx";
 import WithdrawForm from "./WithdrawForm.jsx";
 import BlockedUsers from "./BlockedUsers.jsx";
+import PushToggle from "./PushToggle.jsx";
 import EmptyState from "./EmptyState.jsx";
 import { BlockListSkeleton, ProductListSkeleton } from "./Skeleton.jsx";
 import { client } from "../api/client.js";
@@ -146,6 +147,8 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
       </div>
       {profile && <button className={styles.editProfile} onClick={() => setEditingProfile(true)}>프로필 수정</button>}
     </section>
+    {/* 기기마다 켜고 끄는 설정이라 프로필 바로 아래 둔다. 서버에 푸시 키가 없으면 스스로 숨는다. */}
+    {profile && <PushToggle />}
 
     {profile && <MyRegions regions={profile.regions} onChange={(regions) => {
       setProfile((old) => ({ ...old, regions }));

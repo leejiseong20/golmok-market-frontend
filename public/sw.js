@@ -105,3 +105,63 @@ async function networkFirstShell(request) {
     return cached ?? new Response(OFFLINE, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
 }
+
+/* ---------- 웹 푸시 ---------- */
+
+/**
+ * 서버(PushService)가 보낸 알림을 띄운다. 본문은 {title, body, url, tag}.
+ *
+ * 받은 푸시는 반드시 알림으로 보여야 한다. iOS 와 Chrome 은 보여 주지 않으면 구독을 끊거나
+ * "백그라운드에서 업데이트됨" 같은 기본 알림을 대신 띄운다. 앱을 보고 있는 사람에게는
+ * 서버가 애초에 보내지 않는다(PushRelay 가 WebSocket 연결 여부로 거른다).
+ *
+ * 같은 tag(같은 채팅방)는 알림 하나로 겹친다. renotify 로 새 메시지가 오면 다시 울린다.
+ */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const options = {
+    body: data.body || "",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    data: { url: safePath(data.url) },
+  };
+  if (data.tag) {
+    options.tag = data.tag;
+    options.renotify = true;
+  }
+  event.waitUntil(self.registration.showNotification(data.title || "골목마켓", options));
+});
+
+/** 알림을 누르면 앱을 앞으로 가져와 그 화면으로 보낸다. 열린 창이 없으면 새로 연다. */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(safePath(event.notification.data && event.notification.data.url), self.location.origin).href;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of windows) {
+      if (new URL(client.url).origin !== self.location.origin) continue;
+      await client.focus();
+      try {
+        await client.navigate(target);
+      } catch {
+        // 이 워커가 맡지 않은 창은 옮길 수 없다. 새 창으로 연다.
+        await self.clients.openWindow(target);
+      }
+      return;
+    }
+    await self.clients.openWindow(target);
+  })());
+});
+
+/**
+ * 우리 앱 안의 경로만 연다. "//evil.com" 이나 "https://…" 가 들어와도 밖으로 나가지 않는다
+ * (서버가 만든 값이지만, 알림 경로 허용 목록 routes.isAppPath 와 같은 이유로 한 번 더 막는다).
+ */
+function safePath(url) {
+  return typeof url === "string" && url.startsWith("/") && !url.startsWith("//") ? url : "/";
+}

@@ -25,6 +25,8 @@ import { fetchChatUnreadCount, openChatRoom } from "./api/chatApi.js";
 import { fetchUnreadCount } from "./api/notificationApi.js";
 import { logout } from "./api/authApi.js";
 import { blockConfirmText, blockUser, unblockUser } from "./api/blockApi.js";
+import { deletePushSubscription } from "./api/pushApi.js";
+import { disablePush } from "./push.js";
 import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavorite } from "./api/productApi.js";
 import { homeSearch, isAppPath, MY_TABS, parseHomeQuery, parseId, paths } from "./routes.js";
 import { theme } from "./theme.js";
@@ -441,9 +443,24 @@ export default function App() {
     const room = await openChatRoom(product.id);
     goTo(paths.chatRoom(room.roomId));
   }
+  /**
+   * 로그아웃하면 이 기기로 오던 이 계정의 알림을 끊는다. 끊지 않으면 다른 사람이 이 기기를 써도
+   * 앞사람의 채팅 알림이 계속 뜬다. 인증이 필요한 요청이라 로그아웃보다 먼저 한다.
+   * 늦어도 로그아웃을 붙잡지 않게 1.5초만 기다린다. 서버에서 못 지워도 브라우저 구독은 지워지고(disablePush),
+   * 남은 서버 행은 다음 발송 때 푸시 서비스가 410 을 돌려줘 지워진다.
+   */
+  async function releasePush() {
+    try {
+      await Promise.race([
+        disablePush({ container: navigator.serviceWorker, api: { remove: deletePushSubscription } }),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    } catch { /* 위 설명대로 스스로 정리된다 */ }
+  }
   async function signOut() {
     if (logoutPending.current) return;
     logoutPending.current = true; setLoggingOut(true);
+    await releasePush();
     try { await logout(); toast.show("로그아웃했어요."); } catch (error) { toast.error(error.message); }
     finally { logoutPending.current = false; setLoggingOut(false); }
   }
