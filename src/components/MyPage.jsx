@@ -126,6 +126,8 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
         <h1 className={styles.title}>나의 골목</h1>
         <p className={styles.sub}>로그인하면 찜한 상품과 구매내역을 볼 수 있어요.</p>
         <button className={styles.primary} onClick={onLogin}>로그인하기</button>
+        {/* 화면 모드는 로그인과 상관없는 기기 설정이라 비로그인에게도 설정을 연다. */}
+        <button className={styles.guestSettings} onClick={onOpenSettings}><Icon name="settings" size={16} /> 설정</button>
       </section>
     </main>;
   }

@@ -15,6 +15,18 @@
 
 .loading { font-size: var(--fs-sm); color: var(--ink-4); }
 
+/* 설명 + 조작이 한 묶음인 카드(화면 모드). 휴대폰 알림 줄과 같은 테두리·여백이다. */
+.card { display: grid; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.cardText { display: grid; gap: 2px; }
+.cardText strong { font-size: var(--fs-body); color: var(--ink); }
+.cardText span { font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-4); }
+
+/* 세 칸짜리 고르기. 고른 칸만 채워 무엇이 켜져 있는지 색이 아니라 모양으로도 보인다. */
+.segment { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s1); padding: var(--s1); border-radius: var(--radius-sm); background: var(--surface-2); }
+.segmentItem { min-height: var(--control-sm); border: 0; border-radius: calc(var(--radius-sm) - 2px); background: none; color: var(--ink-3); font: inherit; font-size: var(--fs-sm); font-weight: 600; }
+.segmentItem:hover { color: var(--ink); }
+.segmentOn { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+
 /* 누르는 줄 모음. 줄마다 구분선을 두고, 한 묶음은 카드 하나다. */
 .list { display: grid; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
 .row {
@@ -38,7 +50,7 @@
 /* 되돌릴 수 없는 동작. 색으로 경고하되 크기는 다른 줄과 같게 둔다(눈에 띄게 할 이유가 없다). */
 .danger { color: var(--danger); }
 
-.guest { padding: var(--s9) 0; text-align: center; color: var(--ink-3); display: grid; gap: var(--s4); justify-items: center; }
+.guest { padding: var(--s7) 0; text-align: center; color: var(--ink-3); display: grid; gap: var(--s4); justify-items: center; }
 
 @media (min-width: 880px) {
   .shell { padding-top: var(--s7); padding-bottom: var(--s9); }

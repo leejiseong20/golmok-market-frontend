@@ -30,7 +30,6 @@ import { deletePushSubscription } from "./api/pushApi.js";
 import { disablePush } from "./push.js";
 import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavorite } from "./api/productApi.js";
 import { homeSearch, isAppPath, MY_TABS, parseHomeQuery, parseId, paths } from "./routes.js";
-import { theme } from "./theme.js";
 import { toast } from "./toast.js";
 import styles from "./App.module.css";
 
@@ -77,7 +76,6 @@ function MyScreen(props) {
 export default function App() {
   const session = useSyncExternalStore(client.subscribe, client.getSession);
   // 화면 모드. 고른 값이 없으면 시스템 설정을 따르므로 effective() 를 그대로 읽는다.
-  const dark = useSyncExternalStore(theme.subscribe, theme.effective) === "dark";
   const user = session?.user;
   const location = useLocation();
   const navigate = useNavigate();
@@ -509,7 +507,8 @@ export default function App() {
     }
   }
   const goHome = () => go(paths.home);
-  const navigation = { user, view, loggingOut, chatUnreadCount, onLogin: login, onLogout: signOut,
+  // 로그아웃은 설정 화면에만 있다(헤더·하단 탭에는 없다).
+  const navigation = { user, view, chatUnreadCount, onLogin: login,
     onHome: goHome, onMyPage: () => go(paths.my()), onChat: () => go(paths.chat),
     onRegionClick: () => setModal("region") };
   const categoryBar = <CategoryBar categories={categories} value={categoryId} onChange={(value) => changeHomeQuery({ categoryId: value })} />;
@@ -580,8 +579,7 @@ export default function App() {
   return <>
     <a className="skip-link btn btn-primary btn-sm" href="#main">본문 바로가기</a>
     <Header {...navigation} region={region} search={search} onSearchChange={setSearch} onSearch={submitSearch}
-      unreadCount={unreadCount} onNotifications={() => setModal("notifications")}
-      dark={dark} onToggleTheme={theme.toggle}>
+      unreadCount={unreadCount} onNotifications={() => setModal("notifications")}>
       {categoryBar}
     </Header>
     {view === "home" && <div className={styles.mobileOnly}>{categoryBar}

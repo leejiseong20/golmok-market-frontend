@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { client } from "../api/client.js";
 import { fetchMe } from "../api/userApi.js";
+import { theme } from "../theme.js";
 import { toast } from "../toast.js";
 import BlockedUsers from "./BlockedUsers.jsx";
 import Icon from "./Icon.jsx";
@@ -8,6 +9,33 @@ import MyRegions from "./MyRegions.jsx";
 import PushToggle from "./PushToggle.jsx";
 import WithdrawForm from "./WithdrawForm.jsx";
 import styles from "./SettingsPage.module.css";
+
+const THEME_OPTIONS = [
+  { value: null, label: "시스템" },
+  { value: "light", label: "밝게" },
+  { value: "dark", label: "어둡게" },
+];
+
+/**
+ * 화면 모드. 헤더의 해·달 버튼을 여기로 옮겼다(2026-09-21).
+ * 버튼은 밝게 ↔ 어둡게만 오가서, 한 번 누르면 "기기 설정 따르기"로 돌아갈 방법이 없었다. 세 가지 중에서 고르게 한다.
+ * 기기에 저장되는 설정이라 로그인하지 않아도 바꿀 수 있다.
+ */
+function ThemeSetting() {
+  const chosen = useSyncExternalStore(theme.subscribe, theme.get);
+  const effective = useSyncExternalStore(theme.subscribe, theme.effective);
+  return <section className={styles.card} aria-label="화면 모드">
+    <div className={styles.cardText}>
+      <strong>화면 모드</strong>
+      <span>{chosen ? "이 기기에서 직접 고른 화면이에요." : `기기 설정을 따라요(지금 ${effective === "dark" ? "어두운" : "밝은"} 화면).`}</span>
+    </div>
+    <div className={styles.segment} role="group" aria-label="화면 모드 고르기">
+      {THEME_OPTIONS.map((option) => <button key={option.label} type="button" aria-pressed={chosen === option.value}
+        className={styles.segmentItem + (chosen === option.value ? " " + styles.segmentOn : "")}
+        onClick={() => theme.set(option.value)}>{option.label}</button>)}
+    </div>
+  </section>;
+}
 
 /**
  * 설정(/settings). 마이페이지의 톱니바퀴에서 들어온다.
@@ -42,8 +70,9 @@ export default function SettingsPage({ user, onBack, onLogin, onLogout, loggingO
   if (!user) {
     return <main className={styles.shell} id="main" tabIndex={-1}>
       {header}
+      <ThemeSetting />
       <section className={styles.guest}>
-        <p>로그인하면 알림과 내 동네를 설정할 수 있어요.</p>
+        <p>로그인하면 알림·내 동네·차단도 설정할 수 있어요.</p>
         <button className="btn btn-primary" onClick={onLogin}>로그인하기</button>
       </section>
     </main>;
@@ -54,6 +83,7 @@ export default function SettingsPage({ user, onBack, onLogin, onLogout, loggingO
 
     {/* 기기마다 켜고 끄는 설정이다. 서버에 푸시 키가 없으면 스스로 숨는다. */}
     <PushToggle />
+    <ThemeSetting />
 
     {profile.error && <div className="alert alert-danger" role="alert">{profile.error}
       <button className="btn btn-outline btn-sm" onClick={() => setRetry((n) => n + 1)}>다시 시도</button></div>}
