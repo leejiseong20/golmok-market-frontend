@@ -97,7 +97,7 @@ export default function NotificationPanel({ onClose, onNavigate, onRead, onAllRe
       아직 알림이 없어요. 찜·거래·후기 소식이 여기에 모여요.</p>}
     <ul className={styles.list}>
       {list.items.map((notification) => <li key={notification.id}>
-        <button className={styles.item + (notification.read ? "" : " " + styles.unread)} onClick={() => open(notification)}>
+        <button className={styles.item + " " + (notification.read ? styles.read : styles.unread)} onClick={() => open(notification)}>
           <span className={styles.top}>
             <strong>{notification.title}</strong>
             <time dateTime={notification.createdAt}>{relativeTime(notification.createdAt)}</time>

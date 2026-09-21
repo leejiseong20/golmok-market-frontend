@@ -73,6 +73,28 @@ function MyScreen(props) {
  * 로그인·동네 선택·알림함·상품 등록/수정 창은 주소에 넣지 않는다. 공유할 대상이 아니고,
  * 작성 중 뒤로가기로 입력이 날아가면 안 되기 때문이다.
  */
+/**
+ * 목록 끝 표시. 화면 아래 600px 안으로 들어오면 onReach 를 부른다.
+ * 스크롤 이벤트마다 위치를 재지 않고 브라우저(IntersectionObserver)에 맡긴다. 닿기 전에 미리 불러 기다림을 줄인다.
+ * 불러오는 동안은 부모가 이 요소를 빼므로, 다 불러온 뒤에도 아직 화면 가까이면 다시 나타나며 한 번 더 부른다
+ * (첫 페이지가 화면보다 짧은 큰 모니터에서도 끝까지 채워진다).
+ */
+function InfiniteTrigger({ onReach }) {
+  const ref = useRef(null);
+  const reach = useRef(onReach);
+  reach.current = onReach;
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) reach.current();
+    }, { rootMargin: "0px 0px 600px 0px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return <div ref={ref} aria-hidden="true" style={{ height: 1 }} />;
+}
+
 export default function App() {
   const session = useSyncExternalStore(client.subscribe, client.getSession);
   // 화면 모드. 고른 값이 없으면 시스템 설정을 따르므로 effective() 를 그대로 읽는다.
@@ -554,7 +576,9 @@ export default function App() {
           description="다른 동네나 검색어로 찾아보거나, 첫 물건을 올려보세요." />}
       <div className={styles.feed}>{feed.items.map((product) => <ProductCard key={product.id} product={product}
         onOpen={() => openProduct(product.id)} />)}</div>
-      {feed.hasNext && <button className={"btn btn-outline btn-block " + styles.more} onClick={more} disabled={feed.loadingMore}>{feed.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
+      {feed.loadingMore && <div className={styles.more}><ProductListSkeleton count={3} label="상품을 더 불러오는 중" /></div>}
+      {/* 이 줄이 화면 가까이 오면 다음 페이지를 부른다. 실패하면 멈추고 위의 "다시 시도"를 기다린다(자동 재시도는 요청을 쏟아낸다). */}
+      {feed.hasNext && !feed.loading && !feed.loadingMore && !feed.error && <InfiniteTrigger onReach={more} />}
     </section>
     <Sidebar onRegionClick={navigation.onRegionClick} onKeyword={(value) => changeHomeQuery({ keyword: value })} />
   </main>;

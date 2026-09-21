@@ -17,6 +17,9 @@
 .item:hover { border-color: var(--accent-border); }
 /* 안 읽은 알림은 색만이 아니라 왼쪽 막대로도 구분한다(색각 차이). */
 .unread { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+/* 읽은 알림은 글자를 연하게 해 한눈에 "이미 본 것"으로 읽히게 한다. 안 읽은 알림의 배경·막대와 함께 두 겹으로 구분한다. */
+.read .top strong { font-weight: 500; color: var(--ink-3); }
+.read .content { color: var(--ink-4); }
 .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .top strong { font-size: 15px; overflow-wrap: anywhere; }
 .top time { flex-shrink: 0; font-size: 12px; color: var(--ink-4); }

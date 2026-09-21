@@ -11,7 +11,8 @@ import styles from "./Modal.module.css";
 export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChanged, onDeleted, onStartChat, onOpenProfile, onToggleFavorite, onReport }) {
   const [index, setIndex] = useState(0);
   const [zoomed, setZoomed] = useState(false);
-  const [failedImage, setFailedImage] = useState(null);
+  const [failedImages, setFailedImages] = useState(() => new Set());
+  const track = useRef(null);
   /**
    * 지금 진행 중인 동작("chat" · "favorite" · "manage").
    * 하나의 불리언으로 두면 찜을 누른 동안에도 채팅 버튼 글자가 "채팅방 여는 중…"으로 바뀌어
@@ -24,6 +25,28 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const product = detail.data;
   const image = product?.images[index];
+  const count = product?.images.length ?? 0;
+
+  /**
+   * 사진은 가로 한 줄(스크롤 스냅)이다. 모바일은 손가락으로 넘기고(브라우저 기본 스크롤이라 관성·되돌아옴이 자연스럽다),
+   * PC 는 가로 스크롤을 막고 ← → 버튼으로 옮긴다. 몇 번째인지는 어느 쪽이든 스크롤 위치에서 읽는다.
+   */
+  function showPhoto(next) {
+    const node = track.current;
+    if (node) node.scrollTo({ left: next * node.clientWidth });
+    setIndex(next);
+  }
+  function syncIndex() {
+    const node = track.current;
+    if (!node || !node.clientWidth) return;
+    const current = Math.min(count - 1, Math.max(0, Math.round(node.scrollLeft / node.clientWidth)));
+    setIndex((old) => old === current ? old : current);
+  }
+  // 크게 보기에서 넘긴 사진으로 돌아왔을 때 줄도 그 사진에 맞춘다.
+  useEffect(() => {
+    const node = track.current;
+    if (node && Math.round(node.scrollLeft / (node.clientWidth || 1)) !== index) node.scrollTo({ left: index * node.clientWidth, behavior: "instant" });
+  }, [zoomed]);
   async function act(kind, status) {
     if (busy.current) return;
     if (kind === "delete" && !window.confirm("상품을 삭제할까요? 삭제한 상품은 목록에서 사라집니다.")) return;
@@ -66,15 +89,26 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
     {detail.error && <><p className={styles.error} role="alert">{detail.error}</p>
       <div className={styles.actions}><button className={styles.secondary} onClick={onRetry}>다시 시도</button></div></>}
     {product && <>
-      {image && failedImage !== image.id
-        ? <button type="button" className={styles.gallery} onClick={() => setZoomed(true)} aria-label="사진 크게 보기">
-            <img src={image.imageUrl} alt={`${product.title} 사진 ${index + 1}`} onError={() => setFailedImage(image.id)} />
-          </button>
-        : <div className={styles.gallery}><span>사진을 표시할 수 없습니다</span></div>}
-      {product.images.length > 1 && <div className={styles.pager}>
-        <button className={styles.secondary} onClick={() => setIndex(index - 1)} disabled={index === 0} aria-label="이전 사진">←</button>
-        <span>{index + 1} / {product.images.length}</span>
-        <button className={styles.secondary} onClick={() => setIndex(index + 1)} disabled={index === product.images.length - 1} aria-label="다음 사진">→</button>
+      {count === 0
+        ? <div className={styles.gallery}><span>사진을 표시할 수 없습니다</span></div>
+        : <div className={styles.track} ref={track} onScroll={syncIndex}>
+            {product.images.map((photo, photoIndex) => failedImages.has(photo.id)
+              ? <div key={photo.id} className={styles.gallery}><span>사진을 표시할 수 없습니다</span></div>
+              : <button key={photo.id} type="button" className={styles.gallery} tabIndex={photoIndex === index ? 0 : -1}
+                  onClick={() => { setIndex(photoIndex); setZoomed(true); }} aria-label={`사진 ${photoIndex + 1} 크게 보기`}>
+                  {/* 첫 장만 바로 받고 나머지는 넘길 때 받는다. */}
+                  <img src={photo.imageUrl} alt={`${product.title} 사진 ${photoIndex + 1}`} loading={photoIndex === 0 ? "eager" : "lazy"}
+                    onError={() => setFailedImages((old) => new Set(old).add(photo.id))} />
+                </button>)}
+          </div>}
+      {count > 1 && <div className={styles.pager}>
+        <button className={styles.pagerArrow} onClick={() => showPhoto(index - 1)} disabled={index === 0} aria-label="이전 사진">←</button>
+        {/* 몇 번째 사진인지 점으로 보인다. 지금 사진의 점은 색과 길이로 구분한다(색각 차이). */}
+        <span className={styles.dots} aria-hidden="true">
+          {product.images.map((photo, photoIndex) => <span key={photo.id} className={styles.dot + (photoIndex === index ? " " + styles.dotOn : "")} />)}
+        </span>
+        <span className="sr-only" aria-live="polite">{count}장 중 {index + 1}번째 사진</span>
+        <button className={styles.pagerArrow} onClick={() => showPhoto(index + 1)} disabled={index === count - 1} aria-label="다음 사진">→</button>
       </div>}
       <h3 className={styles.productTitle}>{product.title}</h3>
       <p className={styles.note}>{product.categoryName} · {product.regionName}</p>
