@@ -31,16 +31,48 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
    * 사진은 가로 한 줄(스크롤 스냅)이다. 모바일은 손가락으로 넘기고(브라우저 기본 스크롤이라 관성·되돌아옴이 자연스럽다),
    * PC 는 가로 스크롤을 막고 ← → 버튼으로 옮긴다. 몇 번째인지는 어느 쪽이든 스크롤 위치에서 읽는다.
    */
+  const frame = useRef(0);
+  const settleTimer = useRef(0);
+  const touching = useRef(false);
+  useEffect(() => () => { cancelAnimationFrame(frame.current); clearTimeout(settleTimer.current); }, []);
+
+  function nearest(node) {
+    return Math.min(count - 1, Math.max(0, Math.round(node.scrollLeft / node.clientWidth)));
+  }
+  /**
+   * PC 화살표. 부드러운 이동은 여기서만 한다 — CSS 의 scroll-behavior: smooth 를 줄 전체에 걸면
+   * 모바일에서 손을 뗀 뒤 스냅까지 그 애니메이션이 가로채 뚝뚝 끊겼다.
+   */
   function showPhoto(next) {
     const node = track.current;
-    if (node) node.scrollTo({ left: next * node.clientWidth });
+    if (node) {
+      const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      node.scrollTo({ left: next * node.clientWidth, behavior: reduce ? "auto" : "smooth" });
+    }
     setIndex(next);
   }
-  function syncIndex() {
+  /**
+   * 스크롤이 멈췄는데 사진 경계에 맞지 않으면 가장 가까운 사진으로 맞춘다.
+   * iOS 는 스크롤되는 창(모달) 안의 가로 스냅을 대각선 스와이프 등에서 가끔 놓쳐, 앞 사진이 걸친 채 멈췄다(실제 아이폰 캡처).
+   * 손가락이 닿아 있는 동안에는 건드리지 않는다.
+   */
+  function settle() {
     const node = track.current;
-    if (!node || !node.clientWidth) return;
-    const current = Math.min(count - 1, Math.max(0, Math.round(node.scrollLeft / node.clientWidth)));
-    setIndex((old) => old === current ? old : current);
+    if (!node || !node.clientWidth || touching.current) return;
+    const target = nearest(node) * node.clientWidth;
+    if (Math.abs(node.scrollLeft - target) > 1) node.scrollTo({ left: target, behavior: "smooth" });
+  }
+  // 몇 번째 사진인지는 한 프레임에 한 번만 계산한다(스크롤 이벤트는 그보다 자주 온다).
+  function onTrackScroll() {
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      const node = track.current;
+      if (!node || !node.clientWidth) return;
+      const current = nearest(node);
+      setIndex((old) => old === current ? old : current);
+    });
+    clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(settle, 150);
   }
   // 크게 보기에서 넘긴 사진으로 돌아왔을 때 줄도 그 사진에 맞춘다.
   useEffect(() => {
@@ -91,13 +123,16 @@ export default function ProductDetail({ detail, onClose, onRetry, onEdit, onChan
     {product && <>
       {count === 0
         ? <div className={styles.gallery}><span>사진을 표시할 수 없습니다</span></div>
-        : <div className={styles.track} ref={track} onScroll={syncIndex}>
+        : <div className={styles.track} ref={track} onScroll={onTrackScroll}
+            onTouchStart={() => { touching.current = true; }}
+            onTouchEnd={() => { touching.current = false; clearTimeout(settleTimer.current); settleTimer.current = setTimeout(settle, 150); }}
+            onTouchCancel={() => { touching.current = false; }}>
             {product.images.map((photo, photoIndex) => failedImages.has(photo.id)
               ? <div key={photo.id} className={styles.gallery}><span>사진을 표시할 수 없습니다</span></div>
               : <button key={photo.id} type="button" className={styles.gallery} tabIndex={photoIndex === index ? 0 : -1}
                   onClick={() => { setIndex(photoIndex); setZoomed(true); }} aria-label={`사진 ${photoIndex + 1} 크게 보기`}>
-                  {/* 첫 장만 바로 받고 나머지는 넘길 때 받는다. */}
-                  <img src={photo.imageUrl} alt={`${product.title} 사진 ${photoIndex + 1}`} loading={photoIndex === 0 ? "eager" : "lazy"}
+                  {/* 모두 처음부터 받는다(최대 10장). 넘기는 도중에 받기 시작하면 빈 칸이 지나가고 큰 사진 해독이 스와이프와 겹친다. */}
+                  <img src={photo.imageUrl} alt={`${product.title} 사진 ${photoIndex + 1}`} decoding="async"
                     onError={() => setFailedImages((old) => new Set(old).add(photo.id))} />
                 </button>)}
           </div>}

@@ -87,12 +87,12 @@
   cursor: zoom-in;
 }
 .gallery img { width: 100%; height: 100%; object-fit: contain; min-height: 0; }
-/* 사진 줄. 한 장이 한 칸 전체이고 칸 단위로 멈춘다. PC 는 버튼으로만 옮기므로 가로 스크롤을 막는다. */
+/* 사진 줄. 한 장이 한 칸 전체이고 칸 단위로 멈춘다. PC 는 버튼으로만 옮기므로 가로 스크롤을 막는다.
+   scroll-behavior: smooth 는 두지 않는다 — 모바일 스냅을 가로채 끊겼다(부드러운 이동은 화살표 코드에서만). */
 .track {
   display: flex;
   overflow-x: hidden;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
   border-radius: var(--radius);
 }
 .track > .gallery { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; }
@@ -102,7 +102,6 @@
 .dot { width: 6px; height: 6px; border-radius: 3px; background: var(--line-strong); transition: width 0.2s, background-color 0.2s; }
 .dotOn { width: 16px; background: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
-  .track { scroll-behavior: auto; }
   .dot { transition: none; }
 }
 /* 모바일: 손가락으로 넘긴다. 화살표는 숨기고 점만 남긴다. 스크롤바는 점이 대신하므로 감춘다. */
