@@ -10,6 +10,7 @@ import RegionPicker from "./components/RegionPicker.jsx";
 import ProductDetail from "./components/ProductDetail.jsx";
 import ProductForm from "./components/ProductForm.jsx";
 import MyPage from "./components/MyPage.jsx";
+import SettingsPage from "./components/SettingsPage.jsx";
 import ChatPage from "./components/ChatPage.jsx";
 import UserProfile from "./components/UserProfile.jsx";
 import ReportForm from "./components/ReportForm.jsx";
@@ -86,7 +87,9 @@ export default function App() {
   const userMatch = matchPath("/users/:id", location.pathname);
   const productId = parseId(productMatch?.params.id);
   const profileId = parseId(userMatch?.params.id);
-  const view = pageLocation.pathname.startsWith("/chat") ? "chat" : pageLocation.pathname.startsWith("/my") ? "my" : "home";
+  // 설정은 나의 골목에서 들어가는 화면이라 하단 탭도 "나의 골목"을 켠다.
+  const view = pageLocation.pathname.startsWith("/chat") ? "chat"
+    : pageLocation.pathname.startsWith("/my") || pageLocation.pathname.startsWith("/settings") ? "my" : "home";
 
   const [region, setRegion] = useState(savedRegion);
   const [categories, setCategories] = useState([]);
@@ -561,9 +564,17 @@ export default function App() {
     onReport={(person) => openReport({ targetType: "USER", targetId: person.id, targetName: person.nickname, blockTarget: person })}
     onBlock={blockPerson} />;
   const myScreen = <MyScreen user={user} onHome={goHome} onTabChange={(tab) => goTo(paths.my(tab))}
-    onLogout={signOut} loggingOut={loggingOut}
     refreshKey={productRevision} onOpenProduct={openProduct} onToggleFavorite={toggleFavorite}
-    onRegionsChange={applyPrimaryRegion} onLogin={login} onBlocksChanged={blocksChanged} />;
+    onLogin={login} onOpenSettings={() => goTo(paths.settings)} />;
+  /**
+   * 설정의 뒤로 버튼. 앱 안에서 들어왔으면 기록을 한 칸 되돌린다(새 기록을 쌓으면 뒤로가기가 설정으로 되돌아온다).
+   * 주소로 바로 들어왔으면 되돌릴 곳이 없어 나의 골목으로 바꿔치기한다. react-router 가 기록에 idx 를 남긴다.
+   */
+  const leaveSettings = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate(paths.my(), { replace: true }));
+  const settingsScreen = <SettingsPage key={user?.id ?? "guest"} user={user} onBack={leaveSettings} onLogin={login}
+    // 로그아웃하면 설정에 남을 이유가 없다. 나의 골목(로그인 안내)으로 바꿔치기한다.
+    onLogout={async () => { await signOut(); navigate(paths.my(), { replace: true }); }} loggingOut={loggingOut} onHome={goHome}
+    onRegionsChange={applyPrimaryRegion} onBlocksChanged={blocksChanged} />;
 
   return <>
     <a className="skip-link btn btn-primary btn-sm" href="#main">본문 바로가기</a>
@@ -584,6 +595,7 @@ export default function App() {
       <Route path="/chat-rooms/:roomId" element={chatScreen} />
       <Route path="/my" element={myScreen} />
       <Route path="/my/:tab" element={myScreen} />
+      <Route path="/settings" element={settingsScreen} />
       <Route path="*" element={<NotFound onHome={goHome} />} />
     </Routes>
     <BottomNav {...navigation} />

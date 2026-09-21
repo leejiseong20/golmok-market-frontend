@@ -16,6 +16,8 @@ export const paths = {
   chatRoom: (id) => `/chat-rooms/${id}`,
   // 기본 탭(찜한 상품)은 주소를 짧게 둔다.
   my: (tab = "favorites") => (tab === "favorites" ? "/my" : `/my/${tab}`),
+  // 알림·내 동네·차단·계정을 모은 설정. /my/:tab 과 겹치지 않게 따로 둔다(탭이 아니다).
+  settings: "/settings",
 };
 
 /** 경로 조각이 양의 정수 id 인지. "12abc", "0", "-1" 같은 값은 없는 화면으로 본다. */

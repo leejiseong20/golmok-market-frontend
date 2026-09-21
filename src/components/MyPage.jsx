@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ProductCard from "./ProductCard.jsx";
 import PurchaseCard from "./PurchaseCard.jsx";
-import MyRegions from "./MyRegions.jsx";
 import ReviewForm from "./ReviewForm.jsx";
 import ReviewList from "./ReviewList.jsx";
 import Avatar from "./Avatar.jsx";
 import ProfileForm from "./ProfileForm.jsx";
-import WithdrawForm from "./WithdrawForm.jsx";
-import BlockedUsers from "./BlockedUsers.jsx";
-import PushToggle from "./PushToggle.jsx";
+import Icon from "./Icon.jsx";
 import EmptyState from "./EmptyState.jsx";
 import { BlockListSkeleton, ProductListSkeleton } from "./Skeleton.jsx";
 import { client } from "../api/client.js";
@@ -35,7 +32,7 @@ const emptyList = { tab: null, items: [], cursor: null, hasNext: false, loading:
  * 목록에 어느 탭의 데이터인지(list.tab)를 함께 둔다. 뒤로가기로 탭이 바뀌면 effect 가 새 데이터를 받기 전에
  * 한 번 렌더링되는데, 이때 이전 탭 항목을 새 탭의 카드로 그리면 형태가 달라 터진다. 탭이 다르면 비어 있는 것으로 본다.
  */
-export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggleFavorite, onLogin, onLogout, loggingOut, onHome, onRegionsChange, onBlocksChanged, refreshKey = 0 }) {
+export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggleFavorite, onLogin, onOpenSettings, refreshKey = 0 }) {
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
   const [loaded, setList] = useState(emptyList);
@@ -44,8 +41,6 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
   const [saleStatus, setSaleStatus] = useState("");
   const [review, setReview] = useState(null);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [blocksOpen, setBlocksOpen] = useState(false);
   const moreController = useRef(null);
   const morePending = useRef(false);
   const list = loaded.tab === tab ? loaded : { ...emptyList, tab };
@@ -146,14 +141,9 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
           : <p className={styles.temp}>매너온도 <strong>{profile ? `${profile.mannerTemp}℃` : "…"}</strong></p>}
       </div>
       {profile && <button className={styles.editProfile} onClick={() => setEditingProfile(true)}>프로필 수정</button>}
+      {/* 알림·내 동네·차단·로그아웃·탈퇴는 설정으로 모았다. 마이페이지에는 프로필과 목록만 남긴다. */}
+      <button className={styles.settings} onClick={onOpenSettings} aria-label="설정"><Icon name="settings" size={22} /></button>
     </section>
-    {/* 기기마다 켜고 끄는 설정이라 프로필 바로 아래 둔다. 서버에 푸시 키가 없으면 스스로 숨는다. */}
-    {profile && <PushToggle />}
-
-    {profile && <MyRegions regions={profile.regions} onChange={(regions) => {
-      setProfile((old) => ({ ...old, regions }));
-      onRegionsChange(regions);
-    }} />}
 
     <div className={styles.tabs} role="tablist" aria-label="마이페이지 메뉴">
       {TABS.map(({ id, label }) => <button key={id} role="tab" aria-selected={tab === id}
@@ -190,23 +180,6 @@ export default function MyPage({ user, tab, onTabChange, onOpenProduct, onToggle
       {list.hasNext && <button className={styles.more} onClick={more} disabled={list.loadingMore}>
         {list.loadingMore ? "불러오는 중…" : "더 보기"}</button>}
     </section>}
-    {/*
-      계정 동작은 페이지 맨 아래에 둔다. 하단 탭에서 로그아웃을 뺀 뒤로 모바일의 로그아웃 자리이기도 하다.
-      탈퇴는 되돌릴 수 없어 실수로 누르지 않게 조용한 글자 링크로 둔다.
-    */}
-    {profile && <div className={styles.account}>
-      <button className="btn btn-outline btn-sm" onClick={onLogout} disabled={loggingOut}>
-        {loggingOut ? "처리 중…" : "로그아웃"}</button>
-      <button className={styles.withdraw} onClick={() => setBlocksOpen(true)}>차단한 사용자</button>
-      <button className={styles.withdraw} onClick={() => setWithdrawing(true)}>회원 탈퇴</button>
-    </div>}
-    {blocksOpen && <BlockedUsers onClose={() => setBlocksOpen(false)} onChanged={onBlocksChanged} />}
-    {withdrawing && <WithdrawForm onClose={() => setWithdrawing(false)} onWithdrawn={() => {
-      // 서버가 refresh token 을 모두 지웠으므로 이 기기의 세션만 지우면 된다. 홈으로 먼저 옮겨 빈 마이페이지를 거치지 않는다.
-      onHome();
-      client.clearSession();
-      toast.show("탈퇴가 완료됐어요. 그동안 이용해 주셔서 고맙습니다.");
-    }} />}
     {editingProfile && profile && <ProfileForm profile={profile} onClose={() => setEditingProfile(false)}
       onSaved={(updated) => {
         // 응답이 갱신된 내 정보라 다시 조회하지 않는다. 헤더 닉네임은 저장된 세션에서 읽으므로 세션도 바꾼다.

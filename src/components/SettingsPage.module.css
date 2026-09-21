@@ -1,0 +1,45 @@
+/* 설정 화면. 마이페이지와 같은 폭·여백을 쓰되, 좁은 한 줄로 모아 가볍게 둔다. */
+.shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--s5) var(--s4) calc(var(--nav-space) + var(--s8));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.header { display: flex; align-items: center; gap: var(--s2); }
+.back { display: grid; place-items: center; width: var(--control); height: var(--control); margin-left: calc(-1 * var(--s2)); padding: 0; border: 0; border-radius: 50%; background: none; color: var(--ink-2); }
+.back:hover { background: var(--surface-2); }
+.title { font-size: var(--fs-title); font-weight: 700; letter-spacing: -0.02em; }
+
+.loading { font-size: var(--fs-sm); color: var(--ink-4); }
+
+/* 누르는 줄 모음. 줄마다 구분선을 두고, 한 묶음은 카드 하나다. */
+.list { display: grid; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: 52px;
+  padding: 0 var(--s4);
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-body);
+  text-align: left;
+}
+.row:first-child { border-top: 0; }
+.row:hover:not(:disabled) { background: var(--surface-2); }
+.row svg { color: var(--ink-4); flex-shrink: 0; }
+/* 되돌릴 수 없는 동작. 색으로 경고하되 크기는 다른 줄과 같게 둔다(눈에 띄게 할 이유가 없다). */
+.danger { color: var(--danger); }
+
+.guest { padding: var(--s9) 0; text-align: center; color: var(--ink-3); display: grid; gap: var(--s4); justify-items: center; }
+
+@media (min-width: 880px) {
+  .shell { padding-top: var(--s7); padding-bottom: var(--s9); }
+}

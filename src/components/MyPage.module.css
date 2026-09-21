@@ -99,6 +99,6 @@
   align-self: center;
 }
 
-.account { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-top: var(--s8); }
-.withdraw { padding: var(--s2) 2px; border: none; background: none; color: var(--ink-4); font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 3px; }
-.withdraw:hover { color: var(--danger); }
+/* 설정으로 들어가는 톱니바퀴. 프로필 수정 옆, 같은 높이의 동그란 버튼이다. */
+.settings { display: grid; place-items: center; flex: none; width: var(--control); height: var(--control); padding: 0; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--surface); color: var(--ink-3); }
+.settings:hover { border-color: var(--accent-border); color: var(--accent); }
