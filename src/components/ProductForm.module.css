@@ -6,6 +6,15 @@
 .fields .check { display: flex; align-items: center; }
 .check input { width: auto; }
 .label { font-weight: 600; }
+
+/* 동네 인증 전 안내. 등록 폼 대신 이 카드 하나만 보인다 — 할 일이 "인증" 하나뿐이라 버튼도 하나다. */
+.gate { display: grid; justify-items: center; gap: var(--s3); padding: var(--s6) var(--s2) var(--s4); text-align: center; }
+.gate .submit { margin-top: var(--s2); }
+.gate .error { width: 100%; text-align: left; }
+.gateIcon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.gateTitle { font-size: var(--fs-title); font-weight: 700; letter-spacing: -0.02em; }
+.gateText { color: var(--ink-3); line-height: 1.7; }
+.gateNote { font-size: var(--fs-caption); color: var(--ink-4); }
 .group { display: grid; gap: 8px; }
 /* 가격 칸 오른쪽에 "원"을 붙인다. 입력칸 안처럼 보이게 겹쳐 둔다. */
 .money { position: relative; display: block; }

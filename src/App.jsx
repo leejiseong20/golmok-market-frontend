@@ -644,7 +644,7 @@ export default function App() {
         blockTarget: { id: product.seller.id, nickname: product.seller.nickname } })}
       onDeleted={() => { setProductRevision((v) => v + 1); setRetry((v) => v + 1); closeModal(); }} />}
     {editor && <ProductForm key={editor.product?.id ?? "new"} product={editor.product} categories={categories}
-      onClose={() => setEditor(null)} onVerifyRegion={() => go(paths.my())} onSaved={productSaved} />}
+      onClose={() => setEditor(null)} onRegionsChange={applyPrimaryRegion} onSaved={productSaved} />}
     {profileId && <UserProfile key={profileId} userId={profileId} me={user?.id ?? null} onClose={closeModal}
       onReport={(person) => openReport({ targetType: "USER", targetId: person.id, targetName: person.nickname, blockTarget: person })}
       onBlock={blockPerson} onUnblock={unblockPerson} />}

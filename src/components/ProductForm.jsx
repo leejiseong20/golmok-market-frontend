@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import Modal from "./Modal.jsx";
-import { fetchMe } from "../api/userApi.js";
+import { fetchMe, verifyMyRegion } from "../api/userApi.js";
 import { createProduct, updateProduct } from "../api/productApi.js";
 import { uploadImages } from "../api/imageApi.js";
 import Icon from "./Icon.jsx";
 import PhotoSorter from "./PhotoSorter.jsx";
+import { formatDigits, onlyDigits } from "../data/priceInput.js";
+import { toast } from "../toast.js";
 import styles from "./ProductForm.module.css";
 
 /** 서버가 주는 필드 이름을 화면의 항목 이름으로 옮긴다. 모르는 이름은 그대로 보여 준다(새 필드가 생겨도 안 깨진다). */
@@ -16,10 +18,14 @@ const LABELS = {
 const INLINE = ["title", "description", "price", "categoryId", "regionId"];
 
 const TRADE_TYPES = [{ value: "DIRECT", label: "직거래" }, { value: "DELIVERY", label: "택배거래" }];
-/** "1000000" → "1,000,000". 빈 값은 빈 값 그대로다(0 을 미리 채우지 않는다). */
-const formatDigits = (value) => value === "" || value == null ? "" : Number(value).toLocaleString("ko-KR");
+/** 위치 오류 코드(1 거부 · 2 알 수 없음 · 3 시간 초과)를 사람이 읽는 문장으로. */
+function locationError(failure) {
+  if (failure.code === 1) return "위치 권한이 거부됐어요. 브라우저나 휴대폰 설정에서 위치 접근을 허용한 뒤 다시 시도해 주세요.";
+  if (failure.code === 3) return "위치를 찾는 데 너무 오래 걸렸어요. 잠시 뒤 다시 시도해 주세요.";
+  return "지금은 위치를 확인할 수 없어요. 잠시 뒤 다시 시도해 주세요.";
+}
 
-export default function ProductForm({ product, categories, onClose, onSaved, onVerifyRegion }) {
+export default function ProductForm({ product, categories, onClose, onSaved, onRegionsChange }) {
   const [form, setForm] = useState({ title: product?.title ?? "", description: product?.description ?? "",
     price: product?.price != null ? String(product.price) : "", categoryId: product?.categoryId ?? "", regionId: product?.regionId ?? "",
     isNegotiable: product?.isNegotiable ?? false, tradeType: product?.tradeType ?? "DIRECT" });
@@ -52,6 +58,37 @@ export default function ProductForm({ product, categories, onClose, onSaved, onV
     }).catch((e) => { if (!abort.signal.aborted) { setLoadError(e.message); setLoading(false); } });
     return () => abort.abort();
   }, [reload]);
+
+  /**
+   * 인증한 동네가 없을 때 이 창 안에서 바로 인증한다.
+   * 예전에는 "내 동네 인증하기"가 마이페이지로 옮기기만 해서, 거기서 설정 → 내 동네를 다시 찾아가야 했다.
+   * 인증이 끝나면 곧바로 폼이 열려 쓰던 흐름(상품 등록)이 끊기지 않는다.
+   */
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+  function verifyHere() {
+    if (verifying) return;
+    if (!navigator.geolocation) { setVerifyError("이 브라우저에서는 위치를 확인할 수 없어요."); return; }
+    setVerifying(true); setVerifyError("");
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const list = await verifyMyRegion(position.coords.latitude, position.coords.longitude);
+        if (!alive.current) return;
+        const primary = list.find((region) => region.isPrimary) ?? list[0];
+        setRegions(list);
+        setForm((old) => ({ ...old, regionId: primary?.id ?? "" }));
+        onRegionsChange?.(list);
+        if (primary) toast.success(`${primary.name}을 인증했어요. 이제 물건을 올릴 수 있어요.`);
+      } catch (failure) {
+        if (alive.current) setVerifyError(failure.message);
+      } finally {
+        if (alive.current) setVerifying(false);
+      }
+    }, (failure) => {
+      if (!alive.current) return;
+      setVerifyError(locationError(failure)); setVerifying(false);
+    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+  }
 
   const set = (key) => (event) => setForm((old) => ({ ...old, [key]: event.target.value }));
   const external = photos.some((url) => !url.startsWith("/api/images/"));
@@ -118,7 +155,15 @@ export default function ProductForm({ product, categories, onClose, onSaved, onV
   return <Modal title={product ? "상품 수정" : "상품 등록"} busy={!!busy} onClose={() => { if (!pending.current) onClose(); }}>
     {loading && <p role="status">인증한 동네를 불러오고 있어요…</p>}
     {loadError && <p className={styles.error} role="alert">{loadError} <button onClick={() => setReload((v) => v + 1)}>다시 시도</button></p>}
-    {!loading && !loadError && !regions.length && <div><p>상품을 등록하려면 먼저 동네를 인증해 주세요.</p><button onClick={onVerifyRegion}>내 동네 인증하기</button></div>}
+    {!loading && !loadError && !regions.length && <section className={styles.gate} aria-labelledby="region-gate-title">
+      <span className={styles.gateIcon}><Icon name="pin" size={28} /></span>
+      <h3 id="region-gate-title" className={styles.gateTitle}>먼저 우리 동네를 인증해 주세요</h3>
+      <p className={styles.gateText}>골목마켓은 이웃끼리 거래해요.<br />지금 있는 곳의 동네를 인증하면 그 동네에 물건을 올릴 수 있어요.</p>
+      {verifyError && <p className={styles.error} role="alert">{verifyError}</p>}
+      <button type="button" className={styles.submit} onClick={verifyHere} disabled={verifying}>
+        {verifying ? "위치를 확인하고 있어요…" : "현재 위치로 동네 인증"}</button>
+      <p className={styles.gateNote}>위치 권한을 묻는 창이 뜨면 허용해 주세요.</p>
+    </section>}
     {!loading && !loadError && regions.length > 0 && <form onSubmit={submit} className={styles.form}>
       <fieldset disabled={!!busy} className={styles.fields}>
         {/* 중고거래는 사진이 먼저다. 맨 위에 둔다(2026-09-21). */}
@@ -151,7 +196,7 @@ export default function ProductForm({ product, categories, onClose, onSaved, onV
         */}
         <label>가격<span className={styles.money}>
           <input required inputMode="numeric" autoComplete="off" value={formatDigits(form.price)} placeholder="0"
-            onChange={(e) => setForm((old) => ({ ...old, price: e.target.value.replace(/D/g, "").replace(/^0+(?=d)/, "").slice(0, 10) }))}
+            onChange={(e) => setForm((old) => ({ ...old, price: onlyDigits(e.target.value) }))}
             {...invalid("price")} />
           <span aria-hidden="true">원</span></span>{fieldError("price")}</label>
         <label>카테고리<select required value={form.categoryId} onChange={set("categoryId")} {...invalid("categoryId")}><option value="">선택해 주세요</option>
