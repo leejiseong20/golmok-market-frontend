@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { deletePushSubscription, fetchPushPublicKey, savePushSubscription } from "../api/pushApi.js";
-import { currentSubscription, detectPushSupport, disablePush, enablePush } from "../push.js";
+import { detectPushSupport, disablePush, enablePush, reconcilePush } from "../push.js";
 import { toast } from "../toast.js";
 import styles from "./PushToggle.module.css";
 
 const api = { fetchPublicKey: () => fetchPushPublicKey(), save: savePushSubscription, remove: deletePushSubscription };
 
 /**
- * 마이페이지의 "휴대폰 알림" 줄. 켜면 앱을 닫아도 채팅·거래 알림이 온다.
+ * 설정의 "휴대폰 알림" 줄. 켜면 앱을 닫아도 채팅·거래 알림이 온다.
  *
- * 기기마다 다르다 — 폰에서 켜도 PC 에는 오지 않는다. 그래서 상태는 서버가 아니라 이 브라우저의 구독으로 판단한다.
+ * 기기 구독과 서버 등록을 함께 확인한다. 이전 계정이나 서버에 저장되지 않은 구독을 켜짐으로 보이지 않는다.
  * 서버에 키가 없으면(enabled=false) 줄 자체를 숨긴다(누를 수 없는 기능을 보여 주지 않는다).
  */
 export default function PushToggle() {
@@ -18,17 +18,20 @@ export default function PushToggle() {
   const [permission, setPermission] = useState(() => globalThis.Notification?.permission ?? "default");
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
+  const [loadError, setLoadError] = useState("");
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     if (support !== "supported") return undefined;
     let alive = true;
-    Promise.all([fetchPushPublicKey(), currentSubscription(navigator.serviceWorker)])
-      .then(([key, subscription]) => {
-        if (alive) setState({ loading: false, enabled: key.enabled, subscribed: !!subscription && Notification.permission === "granted" });
+    setLoadError("");
+    reconcilePush({ container: navigator.serviceWorker, api })
+      .then((result) => {
+        if (alive) setState({ loading: false, ...result });
       })
-      .catch(() => { if (alive) setState({ loading: false, enabled: false, subscribed: false }); });
+      .catch(() => { if (alive) setLoadError("알림 설정을 확인하지 못했어요."); });
     return () => { alive = false; };
-  }, [support]);
+  }, [support, retry]);
 
   async function toggle() {
     if (pending.current) return;
@@ -59,6 +62,10 @@ export default function PushToggle() {
     }
   }
 
+  if (loadError) return <section className={styles.row} aria-label="휴대폰 알림">
+    <p role="alert">{loadError}</p>
+    <button className="btn btn-outline btn-sm" onClick={() => setRetry((value) => value + 1)}>다시 시도</button>
+  </section>;
   if (support === "supported" && !state.loading && !state.enabled) return null;
 
   let note;

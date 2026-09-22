@@ -72,14 +72,20 @@ self.addEventListener("fetch", (event) => {
 });
 
 async function cacheFirst(request, cacheName, limit) {
-  const cache = await caches.open(cacheName);
-  const hit = await cache.match(request);
+  let cache;
+  let hit;
+  try {
+    cache = await caches.open(cacheName);
+    hit = await cache.match(request);
+  } catch { /* 저장소를 못 써도 네트워크로 읽는다. */ }
   if (hit) return hit;
 
   const response = await fetch(request);
-  if (storable(response)) {
-    await cache.put(request, response.clone());
-    if (limit) await trim(cache, limit);
+  if (cache && storable(response)) {
+    try {
+      await cache.put(request, response.clone());
+      if (limit) await trim(cache, limit);
+    } catch { /* 캐시는 부가 기능이다. 정상 응답을 버리지 않는다. */ }
   }
   return response;
 }
@@ -96,12 +102,15 @@ async function networkFirstShell(request) {
     const response = await fetch(request);
     // 어느 주소로 들어오든 서버는 같은 셸(index.html)을 준다. 그래서 "/" 한 자리에만 보관한다.
     if (storable(response)) {
-      const cache = await caches.open(SHELL);
-      await cache.put("/", response.clone());
+      try {
+        const cache = await caches.open(SHELL);
+        await cache.put("/", response.clone());
+      } catch { /* 저장 실패여도 방금 받은 화면을 보여 준다. */ }
     }
     return response;
   } catch {
-    const cached = await caches.match("/", { cacheName: SHELL });
+    let cached;
+    try { cached = await caches.match("/", { cacheName: SHELL }); } catch { /* 안내 화면으로 대신한다. */ }
     return cached ?? new Response(OFFLINE, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
 }
@@ -163,5 +172,12 @@ self.addEventListener("notificationclick", (event) => {
  * (서버가 만든 값이지만, 알림 경로 허용 목록 routes.isAppPath 와 같은 이유로 한 번 더 막는다).
  */
 function safePath(url) {
-  return typeof url === "string" && url.startsWith("/") && !url.startsWith("//") ? url : "/";
+  if (typeof url !== "string") return "/";
+  try {
+    const parsed = new URL(url, self.location.origin);
+    if (parsed.origin !== self.location.origin || parsed.pathname !== url) return "/";
+    return /^\/(?:products|users|chat-rooms)\/[1-9]\d*$/.test(url)
+      || /^\/my(?:\/(?:favorites|purchases|sales|reviews))?$/.test(url)
+      || url === "/chat" || url === "/" ? url : "/";
+  } catch { return "/"; }
 }

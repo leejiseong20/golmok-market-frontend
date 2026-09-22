@@ -73,7 +73,10 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
      */
     let text;
     try { text = await response.text(); }
-    catch { text = ""; }
+    catch (error) {
+      if (error.name === "AbortError") throw error;
+      throw new ApiError("서버 응답을 끝까지 받지 못했습니다. 다시 시도해 주세요.", { status: response.status });
+    }
     if (!text) {
       if (response.ok) return null;
       throw new ApiError("요청을 처리하지 못했습니다.", { status: response.status, code: "INVALID_RESPONSE" });

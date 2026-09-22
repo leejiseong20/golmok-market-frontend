@@ -2,6 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createApiClient } from "./client.js";
 
+test("성공 헤더 뒤 본문 수신 실패는 빈 성공 응답으로 취급하지 않는다", async () => {
+  const client = createApiClient({ fetchImpl: async () => ({ ok: true, status: 200,
+    text: async () => { throw new TypeError("연결 끊김"); } }) });
+  await assert.rejects(client.request("/products"), /끝까지 받지 못했습니다/);
+});
+
+test("본문을 받다 취소되면 취소 예외를 그대로 전달한다", async () => {
+  const failure = new DOMException("취소", "AbortError");
+  const client = createApiClient({ fetchImpl: async () => ({ ok: true, status: 200,
+    text: async () => { throw failure; } }) });
+  await assert.rejects(client.request("/products"), (error) => error === failure);
+});
+
 test("이미지 업로드는 FormData와 브라우저의 multipart 경계를 유지한다", async () => {
   const body = new FormData(); body.append("files", new Blob(["photo"], { type: "image/png" }), "photo.png");
   const client = createApiClient({ fetchImpl: async (_, options) => {

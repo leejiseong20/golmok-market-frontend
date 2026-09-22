@@ -469,22 +469,17 @@ export default function App() {
   /**
    * 로그아웃하면 이 기기로 오던 이 계정의 알림을 끊는다. 끊지 않으면 다른 사람이 이 기기를 써도
    * 앞사람의 채팅 알림이 계속 뜬다. 인증이 필요한 요청이라 로그아웃보다 먼저 한다.
-   * 늦어도 로그아웃을 붙잡지 않게 1.5초만 기다린다. 서버에서 못 지워도 브라우저 구독은 지워지고(disablePush),
-   * 남은 서버 행은 다음 발송 때 푸시 서비스가 410 을 돌려줘 지워진다.
+   * 브라우저 해제를 먼저 끝내고 서버 삭제는 제한 시간만 기다린다.
+   * 브라우저 해제 자체가 실패하면 로그아웃을 완료한 것처럼 보이지 않는다.
    */
   async function releasePush() {
-    try {
-      await Promise.race([
-        disablePush({ container: navigator.serviceWorker, api: { remove: deletePushSubscription } }),
-        new Promise((resolve) => setTimeout(resolve, 1500)),
-      ]);
-    } catch { /* 위 설명대로 스스로 정리된다 */ }
+    await disablePush({ container: navigator.serviceWorker, api: { remove: deletePushSubscription } });
   }
   async function signOut() {
     if (logoutPending.current) return;
     logoutPending.current = true; setLoggingOut(true);
-    await releasePush();
-    try { await logout(); toast.show("로그아웃했어요."); } catch (error) { toast.error(error.message); }
+    try { await releasePush(); await logout(); toast.show("로그아웃했어요."); return true; }
+    catch (error) { toast.error(error.message); return false; }
     finally { logoutPending.current = false; setLoggingOut(false); }
   }
   const login = () => setModal("auth");
@@ -598,7 +593,7 @@ export default function App() {
   const leaveSettings = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate(paths.my(), { replace: true }));
   const settingsScreen = <SettingsPage key={user?.id ?? "guest"} user={user} onBack={leaveSettings} onLogin={login}
     // 로그아웃하면 설정에 남을 이유가 없다. 나의 골목(로그인 안내)으로 바꿔치기한다.
-    onLogout={async () => { await signOut(); navigate(paths.my(), { replace: true }); }} loggingOut={loggingOut} onHome={goHome}
+    onLogout={async () => { if (await signOut()) navigate(paths.my(), { replace: true }); }} loggingOut={loggingOut} onHome={goHome}
     onRegionsChange={applyPrimaryRegion} onBlocksChanged={blocksChanged} />;
 
   return <>

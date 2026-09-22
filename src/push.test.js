@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { base64UrlToBytes, currentSubscription, detectPushSupport, disablePush, enablePush } from "./push.js";
+import { base64UrlToBytes, currentSubscription, detectPushSupport, disablePush, enablePush, reconcilePush, syncPushAccount } from "./push.js";
 
 const SERVER_KEY = "BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8";
 
@@ -114,12 +114,12 @@ test("서버 키가 바뀌었으면 옛 구독을 지우고 새로 구독한다"
 
 // ---------- 끄기 ----------
 
-test("끄면 서버 구독을 먼저 지우고 브라우저 구독을 지운다", async () => {
+test("끄면 브라우저 구독을 먼저 지우고 서버 구독을 지운다", async () => {
   const browser = fakeBrowser();
   await enablePush(browser);
   browser.calls.length = 0;
   await disablePush(browser);
-  assert.deepEqual(browser.calls.map(([name]) => name), ["remove", "unsubscribe"]);
+  assert.deepEqual(browser.calls.map(([name]) => name), ["unsubscribe", "remove"]);
 });
 
 test("서버에서 지우지 못해도 이 기기의 브라우저 구독은 지운다", async () => {
@@ -127,7 +127,90 @@ test("서버에서 지우지 못해도 이 기기의 브라우저 구독은 지�
   await enablePush(browser);
   browser.calls.length = 0;
   browser.api.remove = async () => { throw new Error("오프라인"); };
-  await assert.rejects(disablePush(browser));
+  await disablePush(browser);
+  assert.deepEqual(browser.calls.map(([name]) => name), ["unsubscribe"]);
+});
+
+test("서버 삭제가 지연돼도 브라우저 해제는 먼저 끝난다", async () => {
+  const browser = fakeBrowser();
+  await enablePush(browser);
+  browser.calls.length = 0;
+  let finish;
+  browser.api.remove = () => new Promise((resolve) => { finish = resolve; });
+  const task = disablePush(browser);
+  await new Promise(setImmediate);
+  assert.equal(browser.calls[0][0], "unsubscribe");
+  finish();
+  await task;
+});
+
+test("서버 등록 실패는 브라우저 구독도 해제한다", async () => {
+  const browser = fakeBrowser();
+  browser.api.save = async () => { throw new Error("저장 실패"); };
+  await assert.rejects(enablePush(browser));
+  assert.ok(browser.calls.some(([name]) => name === "unsubscribe"));
+});
+
+test("세션이 사라지면 브라우저 구독을 해제한다", async () => {
+  const browser = fakeBrowser();
+  await enablePush(browser);
+  browser.calls.length = 0;
+  await syncPushAccount(null, browser.container);
+  assert.ok(browser.calls.some(([name]) => name === "unsubscribe"));
+});
+
+test("계정 변경 중 늦게 끝난 구독 저장은 폐기한다", async () => {
+  const browser = fakeBrowser();
+  await syncPushAccount(1, browser.container);
+  let finish;
+  browser.api.save = () => new Promise((resolve) => { finish = resolve; });
+  const saving = enablePush(browser);
+  await new Promise(setImmediate);
+  const changed = syncPushAccount(2, browser.container);
+  finish();
+  await assert.rejects(saving, /로그인 상태/);
+  await changed;
+  assert.ok(browser.calls.some(([name]) => name === "unsubscribe"));
+});
+
+test("켜짐 표시는 서버 재등록이 성공해야 확정된다", async () => {
+  const browser = fakeBrowser();
+  await enablePush(browser);
+  browser.calls.length = 0;
+  assert.deepEqual(await reconcilePush(browser), { enabled: true, subscribed: true });
+  assert.equal(browser.calls[0][0], "save");
+});
+
+test("같은 계정은 구독을 유지하고 다른 계정은 해제한다", async () => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const values = new Map();
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key),
+  } });
+  try {
+    const browser = fakeBrowser();
+    await syncPushAccount(10, browser.container);
+    await enablePush(browser);
+    browser.calls.length = 0;
+    await syncPushAccount(10, browser.container);
+    assert.equal(browser.calls.length, 0);
+    await syncPushAccount(11, browser.container);
+    assert.deepEqual(browser.calls.map(([name]) => name), ["unsubscribe"]);
+    assert.equal(values.has("golmok.push.owner"), false);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, "localStorage", previous);
+    else delete globalThis.localStorage;
+  }
+});
+
+test("설정 확인 중 서버 재등록 실패도 구독을 해제하고 오류로 알린다", async () => {
+  const browser = fakeBrowser();
+  await enablePush(browser);
+  browser.calls.length = 0;
+  browser.api.save = async () => { throw new Error("등록 실패"); };
+  await assert.rejects(reconcilePush(browser), /등록 실패/);
   assert.deepEqual(browser.calls.map(([name]) => name), ["unsubscribe"]);
 });
 
