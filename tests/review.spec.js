@@ -15,10 +15,11 @@ test("실제 거래의 양쪽 후기와 매너온도를 채팅·구매내역·�
     return response.status() === 204 ? null : response.json();
   }
   async function login(account) {
+    // 계정을 바꿀 때 이 기기의 세션만 지운다(로그아웃 버튼은 설정 화면에만 있다).
     await page.goto("/");
-    const logout = page.getByRole("button", { name: "로그아웃", exact: true }).first();
-    if (await logout.isVisible()) await logout.click();
-    await page.getByRole("button", { name: "로그인", exact: true }).first().click();
+    await page.evaluate(() => { localStorage.removeItem("golmok.session"); sessionStorage.removeItem("golmok.session"); });
+    await page.goto("/my");
+    await page.getByRole("button", { name: "로그인하기", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "로그인", exact: true });
     await dialog.getByLabel("이메일").fill(account.email);
     await dialog.getByLabel("비밀번호").fill(password);
@@ -62,7 +63,8 @@ test("실제 거래의 양쪽 후기와 매너온도를 채팅·구매내역·�
     }
     const room = await completedProduct("후기화면검증");
     await login(seller);
-    await page.getByRole("button", { name: "채팅", exact: true }).first().click();
+    // 채팅은 PC 는 헤더, 모바일은 하단 탭에 있다. 보이는 쪽을 누른다.
+    await page.getByRole("button", { name: "채팅", exact: true }).filter({ visible: true }).first().click();
     await page.getByRole("button").filter({ hasText: buyer.user.nickname }).first().click();
     await review(4, "약속 시간에 맞춰 오셨어요.");
     await page.getByRole("button", { name: "상대 프로필 보기" }).click();
@@ -74,7 +76,7 @@ test("실제 거래의 양쪽 후기와 매너온도를 채팅·구매내역·�
     await page.screenshot({ path: info.outputPath("채팅-후기완료.png") });
 
     await login(buyer);
-    await page.getByRole("button", { name: "나의 골목", exact: true }).first().click();
+    await page.getByRole("button", { name: "나의 골목", exact: true }).filter({ visible: true }).first().click();
     await page.getByRole("tab", { name: "구매내역", exact: true }).click();
     await review(5, "설명대로 상태가 좋았어요.");
     await page.getByRole("tab", { name: "받은 후기", exact: true }).click();

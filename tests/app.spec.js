@@ -10,6 +10,9 @@ const products = [product(1, "원목 식탁"), product(2, "작은 스피커", 2)
 async function mockApi(page, { failure = false, delayOld = false } = {}) {
   const requests = [];
   let shouldFail = failure;
+  // 채팅 소켓도 가로챈다. 안 그러면 8080 에 백엔드가 떠 있을 때 가짜 토큰으로 실제 연결해 거부당하고,
+  // 앱이 (설계대로) 세션을 지워 로그인 시나리오가 깨진다. 받기만 하고 아무 응답도 하지 않는 소켓이다.
+  await page.routeWebSocket((url) => url.pathname.startsWith("/api/ws"), () => {});
   // /src/api/*.js 모듈까지 가로채면 JSON이 JS 대신 전달되어 빈 화면이 된다.
   await page.route((url) => url.pathname.startsWith("/api/"), async (route) => {
     const request = route.request(), url = new URL(request.url());

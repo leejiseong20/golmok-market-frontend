@@ -19,29 +19,38 @@ test("실제 서버에서 사진 업로드부터 등록 수정 판매내역 상�
       headers: { Authorization: `Bearer ${accessToken}` }, data: { lat: 37.5006, lng: 127.0366 },
     });
     expect(verified.status()).toBe(200);
-    await page.goto("/");
-    await page.getByRole("button", { name: "로그인", exact: true }).first().click();
+    // PC·모바일 모두 나의 골목의 "로그인하기"로 들어간다(모바일 헤더에는 로그인 버튼이 없다).
+    await page.goto("/my");
+    await page.getByRole("button", { name: "로그인하기", exact: true }).click();
     const auth = page.getByRole("dialog", { name: "로그인", exact: true });
     await auth.getByLabel("이메일").fill(email);
     await auth.getByLabel("비밀번호").fill(password);
     await auth.getByRole("button", { name: "로그인하기" }).click();
     await expect(auth).not.toBeVisible();
 
-    // 실제 브라우저 화면을 PNG로 만들어 실제 업로드 API에 보낸다.
+    // 실제 브라우저 화면을 PNG로 만들어 실제 업로드 API에 보낸다. 등록 버튼은 홈에만 뜬다.
+    await page.goto("/");
     const photo = await page.screenshot();
-    await page.getByRole("button", { name: "＋ 상품 등록", exact: true }).click();
+    await page.getByRole("button", { name: "상품 등록", exact: true }).click();
     const form = page.getByRole("dialog", { name: "상품 등록", exact: true });
     await form.getByLabel("제목", { exact: true }).fill(`등록검증 ${tag}`);
-    await form.getByLabel("설명", { exact: true }).fill("실제 서버와 연결해서 등록한 검증용 상품입니다.");
-    await form.getByLabel("가격", { exact: true }).fill("18000");
+    // 설명 칸은 라벨 안에 "10자 이상" 안내가 함께 있어 이름이 "설명 …" 으로 길다.
+    await form.getByRole("textbox", { name: /^설명/ }).fill("실제 서버와 연결해서 등록한 검증용 상품입니다.");
+    // 가격 칸은 쉼표를 찍어 보인다(data/priceInput.js).
+    // 라벨 안에 "원" 표시가 함께 있어 이름이 "가격 …" 이다.
+    const price = form.getByRole("textbox", { name: /^가격/ });
+    await price.fill("18000");
+    await expect(price).toHaveValue("18,000");
     await form.getByRole("combobox", { name: "카테고리", exact: true }).selectOption({ index: 1 });
     await form.locator('input[type="file"]').setInputFiles([
       { name: "검증사진1.png", mimeType: "image/png", buffer: photo },
       { name: "검증사진2.png", mimeType: "image/png", buffer: photo },
     ]);
-    await expect(form.getByAltText("상품 사진 2", { exact: true })).toBeVisible();
-    await expect(form.getByRole("status")).toHaveCount(0);
-    await form.getByRole("button", { name: "사진 2 앞으로", exact: true }).click();
+    await expect(form.getByRole("button", { name: "사진 2 삭제", exact: true })).toBeVisible();
+    await expect(form.getByText("사진을 업로드하고 있어요…")).toHaveCount(0);
+    // 사진 순서는 끌거나 방향키로 바꾼다(PhotoSorter). 2번 사진을 왼쪽으로 옮기면 대표가 된다.
+    await form.getByRole("button", { name: /^사진 2\./ }).press("ArrowLeft");
+    await expect(form.getByText("사진을 2번에서 1번으로 옮겼어요. 대표 사진이 됩니다.")).toBeAttached();
     await form.screenshot({ path: info.outputPath("등록화면.png") });
     const createdResponse = page.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/products");
     await form.getByRole("button", { name: "등록하기", exact: true }).click();
@@ -50,13 +59,14 @@ test("실제 서버에서 사진 업로드부터 등록 수정 판매내역 상�
     productId = (await created.json()).id;
     const detail = page.getByRole("dialog", { name: "상품 상세", exact: true });
     await expect(detail.getByText(`등록검증 ${tag}`, { exact: true })).toBeVisible();
-    await expect.poll(() => detail.locator("img").evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
+    // 상세 사진은 가로 한 줄에 모두 있다(첫 장이 보이는 사진).
+    await expect.poll(() => detail.locator("img").first().evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
     await detail.getByRole("button", { name: "끌어올리기", exact: true }).click();
     await expect(detail.getByRole("alert")).toContainText("24시간");
     await detail.getByRole("button", { name: "수정하기", exact: true }).click();
     const edit = page.getByRole("dialog", { name: "상품 수정", exact: true });
     await edit.getByLabel("제목", { exact: true }).fill(`수정검증 ${tag}`);
-    await edit.getByLabel("가격", { exact: true }).fill("12000");
+    await edit.getByRole("textbox", { name: /^가격/ }).fill("12000");
     await edit.getByRole("button", { name: "사진 2 삭제", exact: true }).click();
     await edit.getByRole("button", { name: "수정 완료", exact: true }).click();
     await expect(detail.getByText(`수정검증 ${tag}`, { exact: true })).toBeVisible();
@@ -65,12 +75,13 @@ test("실제 서버에서 사진 업로드부터 등록 수정 판매내역 상�
     await status.getByRole("button", { name: "예약중", exact: true }).click();
     await expect(status.getByRole("button", { name: "예약중", exact: true })).toHaveAttribute("aria-pressed", "true");
     await detail.getByRole("button", { name: "닫기", exact: true }).click();
-    await page.getByRole("button", { name: "나의 골목", exact: true }).first().click();
+    // 나의 골목은 PC 는 헤더, 모바일은 하단 탭에 있다. 보이는 쪽을 누른다.
+    await page.getByRole("button", { name: "나의 골목", exact: true }).filter({ visible: true }).first().click();
     await page.getByRole("tab", { name: "판매내역", exact: true }).click();
     await page.getByRole("combobox", { name: "판매 상태", exact: true }).selectOption("RESERVED");
     await expect(page.getByRole("button", { name: `수정검증 ${tag} 상세 보기`, exact: true })).toBeVisible();
     await page.getByRole("tab", { name: "구매내역", exact: true }).click();
-    await expect(page.getByText("아직 구매한 상품이 없어요.", { exact: true })).toBeVisible();
+    await expect(page.getByText("아직 구매한 상품이 없어요", { exact: true })).toBeVisible();
     await page.getByRole("tab", { name: "판매내역", exact: true }).click();
     await expect(page.getByRole("button", { name: `수정검증 ${tag} 상세 보기`, exact: true })).toBeVisible();
     await page.screenshot({ path: info.outputPath("판매내역.png"), fullPage: true });
@@ -81,7 +92,7 @@ test("실제 서버에서 사진 업로드부터 등록 수정 판매내역 상�
     await detail.getByRole("button", { name: "상품 삭제하기", exact: true }).click();
     await expect(detail).not.toBeVisible();
     await page.getByRole("combobox", { name: "판매 상태", exact: true }).selectOption("");
-    await expect(page.getByText("조건에 맞는 판매 상품이 없어요.", { exact: true })).toBeVisible();
+    await expect(page.getByText("조건에 맞는 판매 상품이 없어요", { exact: true })).toBeVisible();
     expect((await request.get(`/api/products/${productId}`)).status()).toBe(404);
     expect(errors).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
