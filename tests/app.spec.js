@@ -16,6 +16,13 @@ async function mockApi(page, { failure = false, delayOld = false } = {}) {
     requests.push(url);
     const reply = (json, status = 200) => route.fulfill({ status, json });
     if (url.pathname === "/api/categories") return reply([{ id: 1, name: "가구" }, { id: 2, name: "디지털" }]);
+    // 화면이 함께 부르는 부가 API. 빠지면 404 가 오류 알림으로 떠 본 시나리오의 알림과 섞인다.
+    if (url.pathname === "/api/search/keywords/popular") return reply([]);
+    if (url.pathname.endsWith("/unread-count")) return reply({ count: 0 });
+    if (url.pathname === "/api/push/public-key") return reply({ enabled: false, publicKey: null });
+    if (url.pathname === "/api/users/me") return reply({ id: 8, email: "new@example.com", nickname: "골목이",
+      profileImageUrl: null, mannerTemp: 36.5, regions: [] });
+    if (url.pathname.startsWith("/api/users/me/")) return reply({ content: [], nextCursor: null, hasNext: false });
     if (url.pathname.startsWith("/api/regions")) return reply([region]);
     if (url.pathname === "/api/products") {
       if (shouldFail) return reply({ code: "INTERNAL_ERROR", message: "상품을 불러오지 못했습니다." }, 500);
@@ -57,10 +64,14 @@ test("동네 선택·목록·커서·상세를 연결하고 상세 요청을 한
   const errors = []; page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/"); await selectRegion(page);
   await expect(page.getByRole("button", { name: "원목 식탁 상세 보기" })).toBeVisible();
-  await page.getByRole("button", { name: "더 보기", exact: true }).click();
+  // 홈은 무한 스크롤이다(2026-09-21). 목록 끝에 닿으면 다음 페이지를 부른다 — "더 보기" 버튼은 없다.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect(page.getByRole("button", { name: "책상 상세 보기", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "더 보기", exact: true })).toHaveCount(0);
-  expect(requests.some((url) => url.searchParams.has("cursor"))).toBeTruthy();
+  // 다음 페이지가 없으면 더 부르지 않는다(커서 요청은 정확히 한 번).
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(300);
+  expect(requests.filter((url) => url.searchParams.has("cursor"))).toHaveLength(1);
   await page.screenshot({ path: info.outputPath("feed.png"), fullPage: true });
   await page.getByRole("button", { name: "원목 식탁 상세 보기" }).click();
   await expect(page.getByRole("dialog").getByText("생활감이 적은 원목 식탁입니다.")).toBeVisible();
@@ -92,18 +103,20 @@ test("필터 변경 시 커서를 초기화하고 늦은 이전 검색 응답을
 test("서버 오류를 표시하고 재시도하며 빈 검색 결과는 더미로 채우지 않는다", async ({ page }) => {
   const state = await mockApi(page, { failure: true });
   await page.goto("/"); await selectRegion(page);
-  await expect(page.getByRole("alert")).toContainText("상품을 불러오지 못했습니다.");
+  const list = page.getByRole("region", { name: "상품 목록" });
+  await expect(list.getByRole("alert")).toContainText("상품을 불러오지 못했습니다.");
   await expect(page.locator("article")).toHaveCount(0);
-  state.recover(); await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+  state.recover(); await list.getByRole("button", { name: "다시 시도", exact: true }).click();
   await expect(page.getByRole("button", { name: "원목 식탁 상세 보기" })).toBeVisible();
   await page.getByRole("searchbox").fill("없는상품"); await page.getByRole("searchbox").press("Enter");
-  await expect(page.getByRole("status")).toContainText("조건에 맞는 상품이 없어요");
+  await expect(list.getByRole("status")).toContainText("\"없는상품\" 검색 결과가 없어요");
   await expect(page.locator("article")).toHaveCount(0);
 });
 
 test("가입 오류·가입 성공·로그인·새로고침 세션 복원·로그아웃", async ({ page }) => {
-  await mockApi(page); await page.goto("/");
-  await page.getByRole("button", { name: "로그인", exact: true }).first().click();
+  // 모바일은 헤더에 로그인 버튼이 없다. PC·모바일 모두 나의 골목의 "로그인하기"로 들어간다.
+  await mockApi(page); await page.goto("/my");
+  await page.getByRole("button", { name: "로그인하기", exact: true }).click();
   await page.getByRole("button", { name: "처음 오셨나요? 회원가입" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("이메일", { exact: true }).fill("duplicate@example.com");
@@ -118,10 +131,17 @@ test("가입 오류·가입 성공·로그인·새로고침 세션 복원·로�
   await dialog.getByLabel("비밀번호", { exact: true }).fill("Password123!");
   await dialog.getByRole("button", { name: "로그인하기" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "로그아웃", exact: true }).first()).toBeVisible();
-  await page.reload(); await page.getByRole("button", { name: "로그아웃", exact: true }).first().click();
-  await expect(page.getByRole("button", { name: "로그인", exact: true }).first()).toBeVisible();
-  expect(await page.evaluate(() => sessionStorage.getItem("golmok.session"))).toBeNull();
+  // 로그인하면 나의 골목에 설정(톱니바퀴)이 보이고, 새로고침해도 세션이 남는다.
+  const settings = page.getByRole("button", { name: "설정", exact: true });
+  await expect(settings).toBeVisible();
+  await page.reload(); await expect(settings).toBeVisible();
+  // 로그아웃은 설정 화면에만 있다(2026-09-21). 끝나면 나의 골목의 로그인 안내로 돌아온다.
+  await settings.click(); await expect(page).toHaveURL(/\/settings$/);
+  await page.getByRole("button", { name: "로그아웃", exact: true }).click();
+  await expect(page.getByRole("button", { name: "로그인하기", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/my$/);
+  // "로그인 상태 유지"(기본 켬)면 localStorage, 끄면 sessionStorage 다. 어느 쪽에도 남지 않아야 한다.
+  expect(await page.evaluate(() => [localStorage.getItem("golmok.session"), sessionStorage.getItem("golmok.session")])).toEqual([null, null]);
 });
 
 test("현재 위치 사용을 거절해도 이름으로 동네를 선택할 수 있다", async ({ page }) => {
@@ -132,7 +152,8 @@ test("현재 위치 사용을 거절해도 이름으로 동네를 선택할 수 
   await page.goto("/");
   await page.getByRole("button", { name: "동네 선택", exact: true }).first().click();
   await page.getByRole("button", { name: "현재 위치로 찾기" }).click();
-  await expect(page.getByRole("alert")).toContainText("위치 권한을 확인");
+  // 위치 오류는 사유별 문구다(2026-09-18). 거부(code 1)면 권한 안내와 이름 검색을 함께 알린다.
+  await expect(page.getByRole("dialog", { name: "동네 선택" }).getByRole("alert")).toContainText("위치 권한이 거부됐어요");
   await page.getByLabel("동네 이름").fill("역삼");
   await page.getByRole("button", { name: "동네 검색", exact: true }).click();
   await page.getByRole("button", { name: "역삼동 서울특별시 강남구 역삼동" }).click();
