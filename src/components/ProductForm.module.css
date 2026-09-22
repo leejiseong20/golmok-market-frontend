@@ -16,6 +16,8 @@
 .gateText { color: var(--ink-3); line-height: 1.7; }
 .gateNote { font-size: var(--fs-caption); color: var(--ink-4); }
 .group { display: grid; gap: 8px; }
+/* 입력 한 칸: 이름(라벨) → 입력칸 → 안내·오류. 라벨에는 이름만 둔다(안내·오류는 aria-describedby 로 잇는다). */
+.field { display: grid; gap: 8px; }
 /* 가격 칸 오른쪽에 "원"을 붙인다. 입력칸 안처럼 보이게 겹쳐 둔다. */
 .money { position: relative; display: block; }
 .money input { padding-right: 36px; font-variant-numeric: tabular-nums; }

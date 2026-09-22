@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { login, signup } from "../api/authApi.js";
 import Modal from "./Modal.jsx";
 import styles from "./Modal.module.css";
@@ -45,12 +45,19 @@ export default function AuthModal({ onClose }) {
       setErrors(fieldErrors);
     } finally { pending.current = false; setBusy(false); }
   }
+  /**
+   * 라벨에는 항목 이름만 둔다. 오류는 라벨 밖에 두고 aria-describedby 로 잇는다(2026-09-22).
+   * 라벨 안에 두면 오류가 뜨는 순간 칸 이름이 "이메일 이미 사용 중인 이메일입니다"로 바뀌고, 보조기기는 오류를 두 번 읽었다.
+   */
+  const uid = useId();
   function field(name, label, props) {
-    return <label className={styles.field}>{label}
-      <input name={name} value={fields[name]} onChange={(e) => setFields({ ...fields, [name]: e.target.value })}
-        disabled={busy} required aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `${name}-error` : undefined} {...props} />
-      {errors[name] && <span className={styles.fieldError} id={`${name}-error`}>{errors[name]}</span>}
-    </label>;
+    const id = `${uid}-${name}`;
+    return <div className={styles.field}>
+      <label htmlFor={id}>{label}</label>
+      <input id={id} name={name} value={fields[name]} onChange={(e) => setFields({ ...fields, [name]: e.target.value })}
+        disabled={busy} required aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `${id}-error` : undefined} {...props} />
+      {errors[name] && <span className={styles.fieldError} id={`${id}-error`}>{errors[name]}</span>}
+    </div>;
   }
   return <Modal title={isSignup ? "회원가입" : "로그인"} onClose={onClose} busy={busy}>
     <p className={styles.note}>가까운 이웃과 골목마켓을 시작해 보세요.</p>

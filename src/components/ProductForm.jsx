@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Modal from "./Modal.jsx";
 import { fetchMe, verifyMyRegion } from "../api/userApi.js";
 import { createProduct, updateProduct } from "../api/productApi.js";
@@ -143,14 +143,24 @@ export default function ProductForm({ product, categories, onClose, onSaved, onR
     finally { pending.current = false; if (alive.current) setBusy(""); }
   }
 
-  /** 입력칸 아래에 붙는 오류 문구. 보조기기에는 aria-describedby 로 연결한다. */
+  /*
+   * 라벨에는 항목 이름만 둔다. 안내문·오류는 라벨 밖에 두고 aria-describedby 로 잇는다(2026-09-22).
+   * 라벨 안에 두면 보조기기가 칸 이름을 "설명 10자 이상 입력해 주세요…"처럼 길게 읽고, 오류는 이름과 설명으로 두 번 읽었다.
+   * id 는 useId 로 만든다 — 등록 창이 두 번 떠도 id 가 겹치지 않는다.
+   */
+  const uid = useId();
+  const fieldId = (name) => `${uid}-${name}`;
+  /** 입력칸 아래에 붙는 오류 문구. */
   const fieldError = (name) => fieldErrors[name]
-    ? <span className={styles.fieldError} id={`${name}-error`}>{fieldErrors[name]}</span>
+    ? <span className={styles.fieldError} id={`${fieldId(name)}-error`}>{fieldErrors[name]}</span>
     : null;
-  const invalid = (name) => ({
+  /** 입력칸 속성: 라벨과 잇는 id, 오류 여부, 설명(안내문 → 오류 순서). */
+  const control = (name, noteId) => ({
+    id: fieldId(name),
     "aria-invalid": fieldErrors[name] ? true : undefined,
-    "aria-describedby": fieldErrors[name] ? `${name}-error` : undefined,
+    "aria-describedby": [noteId, fieldErrors[name] && `${fieldId(name)}-error`].filter(Boolean).join(" ") || undefined,
   });
+  const descriptionNote = `${fieldId("description")}-note`;
 
   return <Modal title={product ? "상품 수정" : "상품 등록"} busy={!!busy} onClose={() => { if (!pending.current) onClose(); }}>
     {loading && <p role="status">인증한 동네를 불러오고 있어요…</p>}
@@ -185,25 +195,44 @@ export default function ProductForm({ product, categories, onClose, onSaved, onR
               disabled={photos.length >= 10 || busy === "upload"} />
           </label>
         </PhotoSorter>
-        <label>제목<input required minLength={2} maxLength={100} value={form.title} onChange={set("title")} {...invalid("title")} />{fieldError("title")}</label>
-        <label>설명
-          <textarea required minLength={10} rows={5} value={form.description} onChange={set("description")} {...invalid("description")} />
-          <span className={styles.note}>10자 이상 입력해 주세요. 상태·사용 기간·거래 방법을 적으면 좋아요.</span>
-          {fieldError("description")}</label>
+        <div className={styles.field}>
+          <label htmlFor={fieldId("title")}>제목</label>
+          <input required minLength={2} maxLength={100} value={form.title} onChange={set("title")} {...control("title")} />
+          {fieldError("title")}
+        </div>
+        <div className={styles.field}>
+          <label htmlFor={fieldId("description")}>설명</label>
+          <textarea required minLength={10} rows={5} value={form.description} onChange={set("description")} {...control("description", descriptionNote)} />
+          <span className={styles.note} id={descriptionNote}>10자 이상 입력해 주세요. 상태·사용 기간·거래 방법을 적으면 좋아요.</span>
+          {fieldError("description")}
+        </div>
         {/*
           가격은 숫자 입력칸(type="number")이 아니라 글자 칸에 숫자 키패드(inputMode)다. 숫자 칸은 쉼표를 찍을 수 없어
           1000000 의 자릿수가 한눈에 안 보였다. 상태에는 숫자만 두고 보일 때만 쉼표를 찍는다.
         */}
-        <label>가격<span className={styles.money}>
-          <input required inputMode="numeric" autoComplete="off" value={formatDigits(form.price)} placeholder="0"
-            onChange={(e) => setForm((old) => ({ ...old, price: onlyDigits(e.target.value) }))}
-            {...invalid("price")} />
-          <span aria-hidden="true">원</span></span>{fieldError("price")}</label>
-        <label>카테고리<select required value={form.categoryId} onChange={set("categoryId")} {...invalid("categoryId")}><option value="">선택해 주세요</option>
-          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>{fieldError("categoryId")}</label>
+        <div className={styles.field}>
+          <label htmlFor={fieldId("price")}>가격</label>
+          <span className={styles.money}>
+            <input required inputMode="numeric" autoComplete="off" value={formatDigits(form.price)} placeholder="0"
+              onChange={(e) => setForm((old) => ({ ...old, price: onlyDigits(e.target.value) }))}
+              {...control("price")} />
+            <span aria-hidden="true">원</span>
+          </span>
+          {fieldError("price")}
+        </div>
+        <div className={styles.field}>
+          <label htmlFor={fieldId("categoryId")}>카테고리</label>
+          <select required value={form.categoryId} onChange={set("categoryId")} {...control("categoryId")}><option value="">선택해 주세요</option>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
+          {fieldError("categoryId")}
+        </div>
         {!categories.length && <p className={styles.error}>카테고리를 불러오지 못했습니다. 화면을 닫고 카테고리 조회를 다시 시도해 주세요.</p>}
-        <label>거래 동네<select required value={form.regionId} onChange={set("regionId")} {...invalid("regionId")}>
-          {regions.map((region) => <option key={region.id} value={region.id}>{region.name}{region.isPrimary ? " (대표)" : ""}</option>)}</select>{fieldError("regionId")}</label>
+        <div className={styles.field}>
+          <label htmlFor={fieldId("regionId")}>거래 동네</label>
+          <select required value={form.regionId} onChange={set("regionId")} {...control("regionId")}>
+            {regions.map((region) => <option key={region.id} value={region.id}>{region.name}{region.isPrimary ? " (대표)" : ""}</option>)}</select>
+          {fieldError("regionId")}
+        </div>
         {/* 선택지가 둘뿐이라 목록을 여는 대신 한 번에 보이는 두 칸으로 고른다. */}
         <div className={styles.group}>
           <p className={styles.label} id="trade-type">거래 방식</p>

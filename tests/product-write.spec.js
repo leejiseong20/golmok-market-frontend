@@ -34,11 +34,12 @@ test("실제 서버에서 사진 업로드부터 등록 수정 판매내역 상�
     await page.getByRole("button", { name: "상품 등록", exact: true }).click();
     const form = page.getByRole("dialog", { name: "상품 등록", exact: true });
     await form.getByLabel("제목", { exact: true }).fill(`등록검증 ${tag}`);
-    // 설명 칸은 라벨 안에 "10자 이상" 안내가 함께 있어 이름이 "설명 …" 으로 길다.
-    await form.getByRole("textbox", { name: /^설명/ }).fill("실제 서버와 연결해서 등록한 검증용 상품입니다.");
+    // 칸 이름은 항목 이름만이다. "10자 이상" 안내는 이름이 아니라 설명(aria-describedby)으로 읽힌다.
+    const description = form.getByLabel("설명", { exact: true });
+    await description.fill("실제 서버와 연결해서 등록한 검증용 상품입니다.");
+    await expect(description).toHaveAccessibleDescription(/10자 이상/);
     // 가격 칸은 쉼표를 찍어 보인다(data/priceInput.js).
-    // 라벨 안에 "원" 표시가 함께 있어 이름이 "가격 …" 이다.
-    const price = form.getByRole("textbox", { name: /^가격/ });
+    const price = form.getByLabel("가격", { exact: true });
     await price.fill("18000");
     await expect(price).toHaveValue("18,000");
     await form.getByRole("combobox", { name: "카테고리", exact: true }).selectOption({ index: 1 });
@@ -66,7 +67,7 @@ test("실제 서버에서 사진 업로드부터 등록 수정 판매내역 상�
     await detail.getByRole("button", { name: "수정하기", exact: true }).click();
     const edit = page.getByRole("dialog", { name: "상품 수정", exact: true });
     await edit.getByLabel("제목", { exact: true }).fill(`수정검증 ${tag}`);
-    await edit.getByRole("textbox", { name: /^가격/ }).fill("12000");
+    await edit.getByLabel("가격", { exact: true }).fill("12000");
     await edit.getByRole("button", { name: "사진 2 삭제", exact: true }).click();
     await edit.getByRole("button", { name: "수정 완료", exact: true }).click();
     await expect(detail.getByText(`수정검증 ${tag}`, { exact: true })).toBeVisible();

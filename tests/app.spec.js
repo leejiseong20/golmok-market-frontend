@@ -127,8 +127,10 @@ test("가입 오류·가입 성공·로그인·새로고침 세션 복원·로�
   await dialog.getByLabel("닉네임", { exact: true }).fill("골목이");
   await dialog.getByRole("button", { name: "가입하기" }).click();
   await expect(dialog.getByRole("alert")).toContainText("이미 사용 중인 이메일");
-  // 오류 문구가 label 안에 추가돼도 같은 입력 요소를 찾는다.
-  await dialog.locator('input[name="email"]').fill("new@example.com");
+  // 오류가 떠도 칸 이름은 "이메일" 그대로다. 오류는 이름이 아니라 설명으로 읽힌다(2026-09-22).
+  const email = dialog.getByLabel("이메일", { exact: true });
+  await expect(email).toHaveAccessibleDescription("이미 사용 중인 이메일입니다.");
+  await email.fill("new@example.com");
   await dialog.getByRole("button", { name: "가입하기" }).click();
   await expect(dialog.getByRole("status")).toContainText("가입이 완료됐습니다");
   await dialog.getByLabel("비밀번호", { exact: true }).fill("Password123!");
