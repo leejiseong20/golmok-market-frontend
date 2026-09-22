@@ -43,7 +43,10 @@ function sameBytes(buffer, bytes) {
  */
 export async function currentSubscription(container) {
   const registration = await container?.getRegistration?.();
-  return registration ? registration.pushManager.getSubscription() : null;
+  // iOS 는 홈 화면 앱에서만 pushManager 를 준다. Safari·Chrome 탭에서는 서비스 워커는 있어도 pushManager 가 없다.
+  // 구독할 수 없는 곳이라 "구독 없음"이다. 없는 객체를 부르면 TypeError 가 나 로그아웃까지 실패했다(2026-09-22, 아이폰 크롬).
+  if (!registration?.pushManager) return null;
+  return registration.pushManager.getSubscription();
 }
 
 /**

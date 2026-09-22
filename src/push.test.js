@@ -214,6 +214,15 @@ test("설정 확인 중 서버 재등록 실패도 구독을 해제하고 오류
   assert.deepEqual(browser.calls.map(([name]) => name), ["unsubscribe"]);
 });
 
+test("pushManager 가 없는 브라우저(iOS 탭)에서도 로그아웃·계정 전환이 실패하지 않는다", async () => {
+  // iOS Safari·Chrome 탭: 서비스 워커 등록은 있지만 pushManager 가 없다.
+  const container = { getRegistration: async () => ({}) };
+  assert.equal(await currentSubscription(container), null);
+  await disablePush({ container, api: { remove: async () => { throw new Error("부르면 안 된다"); } } });
+  await syncPushAccount(null, container);
+  await syncPushAccount(7, container);
+});
+
 test("구독이 없거나 워커가 없으면 조용히 넘어간다", async () => {
   await disablePush(fakeBrowser());
   assert.equal(await currentSubscription({ getRegistration: async () => undefined }), null);
