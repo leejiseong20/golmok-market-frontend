@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { ADMIN_ACTIONS, REPORT_STATUS_LABELS, fetchReport, fetchReports, rejectReport, resolveReport } from "../api/adminApi.js";
+import { ADMIN_ACTIONS, REPORT_STATUS_LABELS, actionLabel, fetchReport, fetchReports, rejectReport, resolveReport } from "../api/adminApi.js";
 import { REPORT_REASONS } from "../api/reportApi.js";
 import { relativeTime } from "../data/format.js";
 import EmptyState from "../components/EmptyState.jsx";
 import Icon from "../components/Icon.jsx";
 import Modal from "../components/Modal.jsx";
 import { toast } from "../toast.js";
-import styles from "./AdminReports.module.css";
+import { useOpenRequest } from "./useAdminList.js";
+import styles from "./AdminList.module.css";
 
 /**
  * 신고함(관리자).
@@ -31,6 +32,8 @@ export default function AdminReports({ onNotFound, onOpenProduct, onOpenProfile 
   const [list, setList] = useState({ items: [], loading: true, error: "", cursor: null, hasNext: false });
   const [openId, setOpenId] = useState(null);
   const [reload, setReload] = useState(0);
+  // 조치 기록에서 "신고 #12"를 누르고 들어오면 그 신고를 바로 연다.
+  useOpenRequest(setOpenId);
 
   useEffect(() => {
     const abort = new AbortController();
@@ -174,7 +177,7 @@ function ReportDetail({ id, onClose, onHandled, onOpenProduct, onOpenProfile }) 
         <h3 className={styles.sectionTitle}>지금까지의 조치</h3>
         <ul className={styles.others}>
           {report.actions.map((item) => <li key={item.id}>
-            {item.action} · {item.adminNickname} · {relativeTime(item.createdAt)}
+            {actionLabel(item.action)} · {item.adminNickname} · {relativeTime(item.createdAt)}
             <span className={styles.otherDetail}>{item.reason}</span>
           </li>)}
         </ul>

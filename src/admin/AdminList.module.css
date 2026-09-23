@@ -1,4 +1,4 @@
-/* 신고함. 목록 화면은 설정 화면과 같은 폭·간격을 쓴다(관리자용이라고 다른 규칙을 만들지 않는다). */
+/* 관리자 목록·상세 공통(신고함·회원·상품·조치 기록). 설정 화면과 같은 폭·간격을 쓴다(관리자용이라고 다른 규칙을 만들지 않는다). */
 .shell {
   max-width: 720px;
   margin: 0 auto;
@@ -32,13 +32,15 @@
 /* 여러 건 몰린 신고는 한 건짜리와 다르게 보여야 한다. 색만으로 구분하지 않고 글자로도 알린다. */
 .count { padding: 2px var(--s2); border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent); font-size: var(--fs-caption); font-weight: 600; }
 .status { padding: 2px var(--s2); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-caption); }
-.statusPENDING { background: var(--danger-bg); color: var(--danger); }
+.statusPENDING, .statusSUSPENDED, .statusDELETED { background: var(--danger-bg); color: var(--danger); }
+.statusWITHDRAWN { background: var(--surface-2); color: var(--ink-4); }
 .rowMeta { font-size: var(--fs-sm); color: var(--ink-4); }
 .detail { font-size: var(--fs-sm); color: var(--ink-3); overflow-wrap: anywhere; }
 
 /* 상세(모달 안) */
 .target { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) 0; border-bottom: 1px solid var(--line); }
 .targetName { font-size: var(--fs-body); font-weight: 600; overflow-wrap: anywhere; }
+.targetName .status { margin-left: var(--s2); font-weight: 400; }
 .facts { display: grid; gap: var(--s2); margin: var(--s4) 0; }
 .facts > div { display: flex; gap: var(--s3); font-size: var(--fs-sm); }
 .facts dt { width: 72px; flex-shrink: 0; color: var(--ink-4); }
@@ -55,6 +57,36 @@
 .reason textarea { width: 100%; box-sizing: border-box; padding: var(--s3); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--field); color: var(--ink); font: inherit; font-weight: 400; resize: vertical; }
 .buttons { display: flex; gap: var(--s2); flex-wrap: wrap; margin-top: var(--s2); }
 
+/* 검색줄. 입력칸은 남는 폭을 모두 쓴다. */
+.search { display: flex; gap: var(--s2); }
+.search input { flex: 1; min-width: 0; height: var(--control-sm); padding: 0 var(--s3); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--field); color: var(--ink); font: inherit; }
+.filterNote { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); font-size: var(--fs-sm); color: var(--ink-3); }
+.selectField { display: flex; align-items: center; gap: var(--s3); font-size: var(--fs-sm); font-weight: 600; color: var(--ink-3); }
+.selectField select { height: var(--control-sm); padding: 0 var(--s3); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--field); color: var(--ink); font: inherit; }
+
+/* 글자 모양의 버튼(다른 관리 화면으로 넘어가기). 밑줄로 누를 수 있음을 알린다. */
+.inlineLink { margin-left: var(--s2); padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 2px; }
+.handleNote { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--line); }
+
+/* 상품 줄: 썸네일 + 내용 */
+.rowThumb { grid-template-columns: auto 1fr; align-items: center; column-gap: var(--s3); }
+.rowBody { display: grid; gap: var(--s1); min-width: 0; }
+.thumb { width: 52px; height: 52px; flex-shrink: 0; border-radius: var(--radius-sm); background: var(--surface-2); object-fit: cover; }
+
+/* 조치 기록 줄. 누르는 곳은 대상 이름뿐이라 줄 전체를 버튼으로 두지 않는다. */
+.logRow { display: grid; gap: var(--s1); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.logTarget { margin-left: 0; font-size: var(--fs-body); font-weight: 700; text-align: left; overflow-wrap: anywhere; }
+
+/* 현황판 */
+.cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
+.card { display: grid; gap: var(--s1); min-height: 96px; padding: var(--s4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; }
+a.card:hover { border-color: var(--accent-border); }
+.cardAlert { border-color: var(--danger); }
+.cardLabel { font-size: var(--fs-sm); color: var(--ink-3); }
+.cardValue { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+.cardUrgent { justify-self: start; padding: 2px var(--s2); border-radius: var(--radius-sm); background: var(--danger-bg); color: var(--danger); font-size: var(--fs-caption); font-weight: 600; }
+
 @media (min-width: 880px) {
+  .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .shell { padding-top: var(--s7); padding-bottom: var(--s9); }
 }

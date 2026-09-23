@@ -18,9 +18,12 @@ export const paths = {
   my: (tab = "favorites") => (tab === "favorites" ? "/my" : `/my/${tab}`),
   // 알림·내 동네·차단·계정을 모은 설정. /my/:tab 과 겹치지 않게 따로 둔다(탭이 아니다).
   settings: "/settings",
-  // 관리자 전용 영역. 진입 버튼은 관리자에게만 헤더에 보인다. /admin 은 신고함으로 넘긴다.
+  // 관리자 전용 영역. 진입 버튼은 관리자에게만 헤더에 보인다. /admin 은 현황판이다.
   admin: "/admin",
   adminReports: "/admin/reports",
+  adminUsers: "/admin/users",
+  adminProducts: "/admin/products",
+  adminActions: "/admin/actions",
 };
 
 /** 경로 조각이 양의 정수 id 인지. "12abc", "0", "-1" 같은 값은 없는 화면으로 본다. */
