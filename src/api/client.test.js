@@ -269,3 +269,40 @@ test("JSON 이 아닌 본문(프록시 오류 페이지 등)은 확인할 수 �
   const client = createApiClient({ fetchImpl: async () => new Response("<html>Bad Gateway</html>", { status: 502 }) });
   await assert.rejects(client.request("/products", { auth: false }), { code: "INVALID_RESPONSE" });
 });
+
+test("정지·탈퇴한 계정(USER_NOT_ACTIVE)이면 세션을 지우고, 요청이 여럿 실패해도 한 번만 알린다", async () => {
+  const revoked = [];
+  const gate = deferred();
+  const client = createApiClient({ storage: storage(), onSessionRevoked: (code) => revoked.push(code),
+    fetchImpl: async () => {
+      await gate.promise;
+      return Response.json({ code: "USER_NOT_ACTIVE", message: "이용할 수 없는 계정입니다." }, { status: 403 });
+    } });
+  // 화면이 동시에 여러 요청을 보낸 상태에서 정지된 경우.
+  const first = client.request("/users/me");
+  const second = client.request("/chat-rooms");
+  gate.resolve();
+  await assert.rejects(first, { code: "USER_NOT_ACTIVE" });
+  await assert.rejects(second, { code: "USER_NOT_ACTIVE" });
+  assert.equal(client.getSession(), null);
+  assert.deepEqual(revoked, ["USER_NOT_ACTIVE"]);
+});
+
+test("재발급이 USER_NOT_ACTIVE 로 거절돼도 세션을 지우고 알린다", async () => {
+  const revoked = [];
+  const client = createApiClient({ storage: storage(), onSessionRevoked: (code) => revoked.push(code),
+    fetchImpl: async (url) => url.endsWith("/auth/reissue")
+      ? Response.json({ code: "USER_NOT_ACTIVE" }, { status: 403 }) : expired() });
+  await assert.rejects(client.request("/products"), { code: "USER_NOT_ACTIVE" });
+  assert.equal(client.getSession(), null);
+  assert.deepEqual(revoked, ["USER_NOT_ACTIVE"]);
+});
+
+test("다른 403(권한 없음 등)은 세션을 지우지 않는다", async () => {
+  const revoked = [];
+  const client = createApiClient({ storage: storage(), onSessionRevoked: (code) => revoked.push(code),
+    fetchImpl: async () => Response.json({ code: "BLOCKED_USER" }, { status: 403 }) });
+  await assert.rejects(client.request("/chat-rooms/1/trade/reserve", { method: "POST" }), { code: "BLOCKED_USER" });
+  assert.notEqual(client.getSession(), null);
+  assert.deepEqual(revoked, []);
+});

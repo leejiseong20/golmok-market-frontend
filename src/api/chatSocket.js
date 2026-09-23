@@ -18,7 +18,7 @@ function defaultUrl() {
  * - 로그인하면 start, 로그아웃하면 stop. 끊기면 라이브러리가 자동으로 다시 연결한다.
  * - 연결할 때마다 현재 access token 을 CONNECT 헤더에 싣는다(재발급된 토큰을 자동으로 쓴다).
  * - 서버가 EXPIRED_TOKEN 으로 거부하면 REST 클라이언트의 재발급을 공유해 새 토큰을 받고, 자동 재연결에 맡긴다.
- *   INVALID_TOKEN·UNAUTHORIZED 면 세션을 지운다(REST 의 401 처리와 같은 규칙).
+ *   INVALID_TOKEN·UNAUTHORIZED 면 세션을 지운다(REST 의 401 처리와 같은 규칙). USER_NOT_ACTIVE(정지·탈퇴)면 revokeSession.
  * - 연결될 때마다 onConnected 를 알린다. 끊긴 동안의 이벤트는 서버가 다시 보내지 않으므로
  *   화면은 이 알림을 받으면 REST 로 다시 불러와야 한다.
  *
@@ -41,6 +41,9 @@ export function createChatSocket({ api = defaultApi, createClient = (options) =>
       try { await api.refreshTokens(); } catch { /* 위 설명 참고 */ }
     } else if (code === "INVALID_TOKEN" || code === "UNAUTHORIZED") {
       api.clearSession();
+    } else if (code === "USER_NOT_ACTIVE") {
+      // 정지·탈퇴한 계정. REST 와 같은 뒤처리(세션 삭제 + 알림 한 번)를 한다.
+      api.revokeSession(code);
     }
   }
 

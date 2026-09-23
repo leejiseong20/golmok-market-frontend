@@ -21,8 +21,8 @@ npm run dev     # http://127.0.0.1:5173
 |---|---|
 | `npm run dev` | 개발 서버 |
 | `npm run build` | 프로덕션 번들 |
-| `npm test` | 단위 테스트 132개(node:test) — API 클라이언트·채팅 소켓·푸시·서비스 워커·주소 규칙·오류 보고 등 |
-| `npm run test:e2e` | Playwright E2E 42개(PC·모바일). API 와 WebSocket 을 모킹하므로 백엔드 없이 돈다 |
+| `npm test` | 단위 테스트 135개(node:test) — API 클라이언트·채팅 소켓·푸시·서비스 워커·주소 규칙·오류 보고 등 |
+| `npm run test:e2e` | Playwright E2E 44개(PC·모바일). API 와 WebSocket 을 모킹하므로 백엔드 없이 돈다 |
 | `npm run test:e2e:live` | 실제 MySQL 백엔드에 붙이는 E2E(상품 쓰기·후기) |
 | `npm run icons` | 앱 아이콘 PNG 재생성(`scripts/make-icons.mjs`) |
 

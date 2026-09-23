@@ -1,4 +1,5 @@
 import { classifyResponse, serverStatus } from "../serverStatus.js";
+import { toast } from "../toast.js";
 
 const SESSION_KEY = "golmok.session";
 
@@ -18,9 +19,10 @@ export class ApiError extends Error {
  * 세션은 언제나 한 곳에만 있다(고른 쪽에 쓰고 다른 쪽은 지운다).
  *
  * onServerResponse 는 응답마다 서버가 살아서 답했는지("up" | "down")를 받는다(serverStatus.js — 데모 서버 꺼짐 안내).
+ * onSessionRevoked 는 서버가 이 계정을 더 쓸 수 없다고 해서(USER_NOT_ACTIVE — 정지·탈퇴) 세션을 지웠을 때 한 번 불린다.
  */
 export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fetch(...args), storage, persistentStorage,
-  onServerResponse = () => {} } = {}) {
+  onServerResponse = () => {}, onSessionRevoked = () => {} } = {}) {
   const listeners = new Set();
   let session = null;
   let generation = 0;
@@ -55,6 +57,16 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
   function clearSession() {
     generation++;
     publish(null);
+  }
+
+  /**
+   * 정지·탈퇴한 계정이라 세션을 지운다. 서버는 이미 받은 access token 도 곧바로 403 USER_NOT_ACTIVE 로 막는다.
+   * 세션을 지우면 다음 요청부터 토큰이 없어 같은 이유로 다시 불리지 않는다(알림이 한 번만 뜬다).
+   */
+  function revokeSession(code) {
+    if (!session) return;
+    clearSession();
+    onSessionRevoked(code);
   }
 
   async function send(path, { method = "GET", body, signal, token } = {}) {
@@ -114,7 +126,8 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
         }
         publish({ ...previous, ...tokens });
       } catch (error) {
-        if (generation === started && ["INVALID_REFRESH_TOKEN", "USER_NOT_ACTIVE"].includes(error.code)) clearSession();
+        if (generation === started && error.code === "USER_NOT_ACTIVE") revokeSession(error.code);
+        else if (generation === started && error.code === "INVALID_REFRESH_TOKEN") clearSession();
         // 네트워크 오류·서버 5xx에서는 토큰을 지우지 않는다.
         throw error;
       }
@@ -140,8 +153,10 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
         options.signal?.throwIfAborted();
         return request(path, { ...options, retry: false });
       }
-      if (auth && token && generation === started && session?.accessToken === token &&
-          ["INVALID_TOKEN", "EXPIRED_TOKEN", "UNAUTHORIZED"].includes(error.code)) clearSession();
+      if (auth && token && generation === started && session?.accessToken === token) {
+        if (["INVALID_TOKEN", "EXPIRED_TOKEN", "UNAUTHORIZED"].includes(error.code)) clearSession();
+        else if (error.code === "USER_NOT_ACTIVE") revokeSession(error.code);
+      }
       throw error;
     }
   }
@@ -151,6 +166,8 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
     getSession: () => session,
     subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener); },
     clearSession,
+    // 채팅 연결이 USER_NOT_ACTIVE 로 거부될 때도 REST 와 같은 뒤처리(세션 삭제 + 알림)를 하려고 연다.
+    revokeSession,
     // 채팅 소켓이 EXPIRED_TOKEN 으로 거부될 때 쓴다. 따로 재발급하면 동시 재발급으로 한쪽 토큰이 폐기되므로 같은 비행을 공유한다.
     refreshTokens: refresh,
     /**
@@ -192,4 +209,5 @@ export const client = createApiClient({
   storage: tabStorage,
   persistentStorage: keepStorage,
   onServerResponse: serverStatus.report,
+  onSessionRevoked: () => toast.error("이용할 수 없는 계정이라 로그아웃했어요."),
 });

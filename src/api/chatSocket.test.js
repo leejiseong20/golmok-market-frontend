@@ -22,12 +22,13 @@ function fakeStomp() {
 }
 
 function fakeApi(session = { accessToken: "access" }) {
-  const calls = { refresh: 0, clear: 0 };
+  const calls = { refresh: 0, clear: 0, revoke: [] };
   return {
     calls,
     getSession: () => session,
     refreshTokens: async () => { calls.refresh++; },
     clearSession: () => { calls.clear++; },
+    revokeSession: (code) => { calls.revoke.push(code); },
   };
 }
 
@@ -64,15 +65,19 @@ test("EXPIRED_TOKEN 으로 거부되면 재발급하고, INVALID_TOKEN·UNAUTHOR
   const instance = stomp.created[0];
 
   await instance.onStompError({ headers: { message: "EXPIRED_TOKEN" } });
-  assert.deepEqual(api.calls, { refresh: 1, clear: 0 });
+  assert.deepEqual(api.calls, { refresh: 1, clear: 0, revoke: [] });
 
   await instance.onStompError({ headers: { message: "INVALID_TOKEN" } });
   await instance.onStompError({ headers: { message: "UNAUTHORIZED" } });
-  assert.deepEqual(api.calls, { refresh: 1, clear: 2 });
+  assert.deepEqual(api.calls, { refresh: 1, clear: 2, revoke: [] });
+
+  // 정지·탈퇴한 계정은 REST 와 같은 뒤처리(세션 삭제 + 알림)를 맡긴다.
+  await instance.onStompError({ headers: { message: "USER_NOT_ACTIVE" } });
+  assert.deepEqual(api.calls, { refresh: 1, clear: 2, revoke: ["USER_NOT_ACTIVE"] });
 
   // 권한 문제(FORBIDDEN)는 토큰 문제가 아니므로 세션을 건드리지 않는다.
   await instance.onStompError({ headers: { message: "FORBIDDEN" } });
-  assert.deepEqual(api.calls, { refresh: 1, clear: 2 });
+  assert.deepEqual(api.calls, { refresh: 1, clear: 2, revoke: ["USER_NOT_ACTIVE"] });
 });
 
 test("재발급이 실패해도 예외가 새지 않는다(다음 재연결에서 다시 시도한다)", async () => {
