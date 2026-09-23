@@ -1,0 +1,50 @@
+/* 관리자 영역의 틀. 일반 헤더와 한눈에 구분되도록 색 대신 "관리자" 글자와 메뉴 줄로 나눈다. */
+.app { min-height: 100vh; min-height: 100dvh; background: var(--bg); }
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: var(--s3) var(--s4);
+}
+
+.brand { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-body); font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.mark { width: 22px; height: 22px; border-radius: 8px; background: var(--accent); }
+
+/* 모바일은 메뉴를 아래 줄 전체로 내린다. 메뉴가 늘면 가로로 넘겨 본다. */
+.menu {
+  order: 3;
+  flex: 1 0 100%;
+  display: flex;
+  gap: var(--s1);
+  overflow-x: auto;
+}
+.menuItem {
+  flex-shrink: 0;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-3);
+  text-decoration: none;
+}
+.menuItem:hover { background: var(--surface-2); color: var(--ink); }
+.active { background: var(--accent-soft); color: var(--accent); }
+
+.exit { margin-left: auto; }
+
+@media (min-width: 880px) {
+  .menu { order: 0; flex: 1 1 auto; }
+  .exit { margin-left: 0; }
+}

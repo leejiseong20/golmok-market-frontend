@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { matchPath, Route, Routes, useLocation, useNavigate, useParams } from "react-router";
 import Header from "./components/Header.jsx";
 import CategoryBar from "./components/CategoryBar.jsx";
@@ -15,7 +15,6 @@ import ChatPage from "./components/ChatPage.jsx";
 import UserProfile from "./components/UserProfile.jsx";
 import ReportForm from "./components/ReportForm.jsx";
 import NotificationPanel from "./components/NotificationPanel.jsx";
-import AdminReports from "./components/AdminReports.jsx";
 import NotFound from "./components/NotFound.jsx";
 import Toaster from "./components/Toaster.jsx";
 import PopularKeywords from "./components/PopularKeywords.jsx";
@@ -26,6 +25,7 @@ import { chatSocket } from "./api/chatSocket.js";
 import { fetchChatUnreadCount, openChatRoom } from "./api/chatApi.js";
 import { fetchUnreadCount } from "./api/notificationApi.js";
 import { logout } from "./api/authApi.js";
+import { fetchMe } from "./api/userApi.js";
 import { blockConfirmText, blockUser, unblockUser } from "./api/blockApi.js";
 import { deletePushSubscription } from "./api/pushApi.js";
 import { disablePush } from "./push.js";
@@ -33,6 +33,9 @@ import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavori
 import { homeSearch, isAppPath, MY_TABS, parseHomeQuery, parseId, paths } from "./routes.js";
 import { toast } from "./toast.js";
 import styles from "./App.module.css";
+
+// 관리자 영역은 관리자만 쓴다. 일반 사용자의 첫 화면 용량에 넣지 않도록 들어갈 때 불러온다.
+const AdminApp = lazy(() => import("./admin/AdminApp.jsx"));
 
 function savedRegion() {
   try {
@@ -114,7 +117,11 @@ export default function App() {
     : pageLocation.pathname.startsWith("/my") || pageLocation.pathname.startsWith("/settings") ? "my"
     : pageLocation.pathname.startsWith("/admin") ? "admin" : "home";
 
-  // 관리자가 아니면 서버가 404 를 준다. 그때부터 이 주소는 없는 페이지다.
+  /**
+   * 관리자 여부. null 은 아직 모름. 세션에는 역할이 없어 내 정보의 admin 으로 읽는다.
+   * 헤더 버튼과 관리자 틀을 고르는 데만 쓴다. 실제 차단은 서버가 하고, 관리자 API 가 404 면 adminDenied 가 켜진다.
+   */
+  const [admin, setAdmin] = useState(null);
   const [adminDenied, setAdminDenied] = useState(false);
   const [region, setRegion] = useState(savedRegion);
   const [categories, setCategories] = useState([]);
@@ -160,6 +167,17 @@ export default function App() {
       .catch((error) => { if (!abort.signal.aborted) setCategoryError(error.message); });
     return () => abort.abort();
   }, [categoryRetry, user?.id]);
+
+  // 계정이 바뀌면 관리자 여부를 새로 묻는다. 실패하면 관리자가 아닌 것으로 본다(버튼이 안 보일 뿐 기능은 그대로다).
+  useEffect(() => {
+    setAdminDenied(false);
+    if (!user?.id) { setAdmin(false); return undefined; }
+    const abort = new AbortController();
+    setAdmin(null);
+    fetchMe(abort.signal).then((me) => { if (!abort.signal.aborted) setAdmin(me?.admin === true); })
+      .catch(() => { if (!abort.signal.aborted) setAdmin(false); });
+    return () => abort.abort();
+  }, [user?.id]);
 
   // 뒤로가기로 검색 조건이 바뀌면 입력창도 주소를 따라간다.
   useEffect(() => { setSearch(keyword); }, [keyword]);
@@ -599,24 +617,30 @@ export default function App() {
   const settingsScreen = <SettingsPage key={user?.id ?? "guest"} user={user} onBack={leaveSettings} onLogin={login}
     // 로그아웃하면 설정에 남을 이유가 없다. 나의 골목(로그인 안내)으로 바꿔치기한다.
     onLogout={async () => { if (await signOut()) navigate(paths.my(), { replace: true }); }} loggingOut={loggingOut} onHome={goHome}
-    onRegionsChange={applyPrimaryRegion} onBlocksChanged={blocksChanged}
-    onAdmin={() => goTo(paths.admin)} />;
+    onRegionsChange={applyPrimaryRegion} onBlocksChanged={blocksChanged} />;
 
   /**
-   * 신고함(관리자). 비로그인은 로그인 안내만 보이고, 관리자가 아니면 목록 요청이 404 라 없는 페이지가 된다.
-   * 여기서 "권한 없음"을 보이면 관리자 화면이 있다는 사실이 드러난다.
+   * 관리자 영역(/admin/*). 비로그인·관리자 아님·서버 404 면 일반 틀의 없는 페이지다.
+   * 없는 페이지까지 관리자 틀로 보이면 "권한 없음"이라고 알리는 것과 같다(관리자 화면이 있다는 사실이 드러난다).
+   * 관리자 여부를 묻는 동안(admin === null)은 어느 틀도 그리지 않는다. 틀이 한 번 바뀌어 번쩍이는 것을 막는다.
    */
-  const adminScreen = !user || adminDenied
-    ? <NotFound onHome={goHome} />
-    : <AdminReports onNotFound={() => setAdminDenied(true)}
-        onOpenProduct={(id) => openProduct(id)} onOpenProfile={(id) => openProfile(id)} />;
+  const inAdmin = view === "admin" && Boolean(user) && admin !== false && !adminDenied;
+  const adminLoading = <main id="main" tabIndex={-1} aria-busy="true" />;
+  const adminScreen = !inAdmin ? <NotFound onHome={goHome} />
+    : admin === null ? adminLoading
+    : <Suspense fallback={adminLoading}>
+      <AdminApp onExit={goHome} onNotFound={() => setAdminDenied(true)}
+        onOpenProduct={(id) => openProduct(id)} onOpenProfile={(id) => openProfile(id)} />
+    </Suspense>;
 
   return <>
     <a className="skip-link btn btn-primary btn-sm" href="#main">본문 바로가기</a>
-    <Header {...navigation} region={region} search={search} onSearchChange={setSearch} onSearch={submitSearch}
-      unreadCount={unreadCount} onNotifications={() => setModal("notifications")}>
+    {/* 관리자 영역은 자기 틀(메뉴·사이트로 돌아가기)을 쓴다. 일반 헤더·하단 탭·상품 등록·footer 를 모두 뺀다. */}
+    {!inAdmin && <Header {...navigation} region={region} search={search} onSearchChange={setSearch} onSearch={submitSearch}
+      unreadCount={unreadCount} onNotifications={() => setModal("notifications")}
+      admin={admin === true} onAdmin={() => goTo(paths.admin)}>
       {categoryBar}
-    </Header>
+    </Header>}
     {view === "home" && <div className={styles.mobileOnly}>{categoryBar}
       {/* 검색 중에는 결과에 집중하도록 인기 검색어를 숨긴다. */}
       {!keyword && <PopularKeywords variant="chips" onSelect={(value) => changeHomeQuery({ keyword: value })} />}</div>}
@@ -631,17 +655,17 @@ export default function App() {
       <Route path="/my/:tab" element={myScreen} />
       <Route path="/settings" element={settingsScreen} />
       {/* 관리자 전용. 권한 판단은 서버가 하고(404), 화면은 그때 없는 페이지로 바꾼다. */}
-      <Route path="/admin" element={adminScreen} />
+      <Route path="/admin/*" element={adminScreen} />
       <Route path="*" element={<NotFound onHome={goHome} />} />
     </Routes>
-    <BottomNav {...navigation} />
+    {!inAdmin && <BottomNav {...navigation} />}
     {/*
       상품 등록 버튼은 홈에서만 띄운다. 채팅에서는 전송 버튼을 가리고, 나의 골목·설정에서는 쓸 일이 없다.
       버튼이 뜬 화면에서는 footer 아래에 버튼 자리를 비워 둔다(맨 아래까지 내리면 footer 글자를 가렸다).
     */}
     {showWriteButton && <button className={styles.writeButton} onClick={writeProduct} aria-label="상품 등록">
       <span className={styles.writeIcon} aria-hidden="true">＋</span><span className={styles.writeLabel}>상품 등록</span></button>}
-    <footer className={styles.footer + " " + styles.pcOnly + (showWriteButton ? " " + styles.footerClear : "")}><div className={styles.footerInner}><span>골목마켓 · 동네 기반 중고거래 플랫폼</span><span>이웃의 물건에 새로운 일상을</span></div></footer>
+    {!inAdmin && <footer className={styles.footer + " " + styles.pcOnly + (showWriteButton ? " " + styles.footerClear : "")}><div className={styles.footerInner}><span>골목마켓 · 동네 기반 중고거래 플랫폼</span><span>이웃의 물건에 새로운 일상을</span></div></footer>}
     {modal === "auth" && <AuthModal onClose={() => setModal(null)} />}
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
     {modal === "notifications" && user && <NotificationPanel onClose={() => setModal(null)} onNavigate={openNotificationTarget}

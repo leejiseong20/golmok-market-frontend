@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { ADMIN_ACTIONS, REPORT_STATUS_LABELS, fetchReport, fetchReports, rejectReport, resolveReport } from "../api/adminApi.js";
 import { REPORT_REASONS } from "../api/reportApi.js";
 import { relativeTime } from "../data/format.js";
-import EmptyState from "./EmptyState.jsx";
-import Icon from "./Icon.jsx";
-import Modal from "./Modal.jsx";
+import EmptyState from "../components/EmptyState.jsx";
+import Icon from "../components/Icon.jsx";
+import Modal from "../components/Modal.jsx";
 import { toast } from "../toast.js";
 import styles from "./AdminReports.module.css";
 

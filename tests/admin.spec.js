@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * 신고함(관리자). 백엔드 없이 돈다.
+ * 관리자 영역(/admin/*). 백엔드 없이 돈다.
  *
+ * 관리자 영역은 일반 헤더·검색·하단 탭 없이 자기 틀(메뉴·사이트로 돌아가기)을 쓴다.
  * 권한 판단은 서버가 한다 — 관리자가 아니면 `/api/admin/**` 가 404 다. 화면이 그때 없는 페이지로 바뀌는지,
  * 그리고 조치에 이유를 반드시 받는지를 본다(이유 없이 남기면 감사 기록의 뜻이 없다).
  */
@@ -61,6 +62,8 @@ async function mockApi(page, { admin = true } = {}) {
 test("신고함에서 대상과 신고 건수를 보고, 이유를 적어야 처리할 수 있다", async ({ page }, info) => {
   const calls = await mockApi(page);
   await page.goto("/admin");
+  // /admin 은 신고함으로 넘긴다.
+  await expect(page).toHaveURL(/\/admin\/reports$/);
 
   const main = page.locator("main");
   await expect(main.getByText("원목 식탁")).toBeVisible();
@@ -101,12 +104,41 @@ test("관리자가 아니면 없는 페이지다", async ({ page }) => {
   await expect(page.locator("main").getByText(/권한|관리자|신고함/)).toHaveCount(0);
 });
 
-test("설정의 관리자 진입은 관리자에게만 보인다", async ({ page }) => {
+test("헤더의 관리자 버튼으로 들어가면 일반 틀 없이 관리자 틀만 보인다", async ({ page }, info) => {
   await mockApi(page, { admin: true });
-  await page.goto("/settings");
-  await expect(page.getByRole("button", { name: "신고함" })).toBeVisible();
+  await page.goto("/");
+  const entry = page.getByRole("banner").getByRole("button", { name: "관리자", exact: true });
+  await expect(entry).toBeVisible();
+  await page.getByRole("banner").screenshot({ path: info.outputPath("헤더진입.png") });
+  await entry.click();
 
+  await expect(page).toHaveURL(/\/admin\/reports$/);
+  await expect(page.getByRole("navigation", { name: "관리자 메뉴" }).getByRole("link", { name: "신고함" }))
+    .toHaveAttribute("aria-current", "page");
+  // 관리 화면에 상품 검색·카테고리·하단 탭·상품 등록이 보이면 지금 어느 쪽에 있는지 헷갈린다.
+  await expect(page.getByRole("searchbox", { name: "상품 검색어" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "모바일 메뉴" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "상품 등록" })).toHaveCount(0);
+  await expect(page.locator("main").getByText("원목 식탁")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("관리자틀.png") });
+
+  await page.getByRole("button", { name: "사이트로 돌아가기" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("searchbox", { name: "상품 검색어" })).toBeVisible();
+});
+
+test("관리자 진입 버튼은 관리자에게만 보이고, 설정에는 진입이 없다", async ({ page }) => {
   await mockApi(page, { admin: false });
+  await page.goto("/");
+  await expect(page.getByRole("searchbox", { name: "상품 검색어" })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("button", { name: "관리자", exact: true })).toHaveCount(0);
   await page.goto("/settings");
   await expect(page.getByRole("button", { name: "신고함" })).toHaveCount(0);
+
+  await mockApi(page, { admin: true });
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
+  // 관리자라도 설정에는 없다. 진입은 헤더 한 곳이다.
+  await expect(page.getByRole("button", { name: "신고함" })).toHaveCount(0);
+  await expect(page.getByRole("banner").getByRole("button", { name: "관리자", exact: true })).toBeVisible();
 });

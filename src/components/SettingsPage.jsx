@@ -46,7 +46,7 @@ function ThemeSetting() {
  *
  * 순서는 자주 쓰는 것 → 드문 것 → 되돌릴 수 없는 것. 회원 탈퇴는 맨 아래, 위험 색 글자다.
  */
-export default function SettingsPage({ user, onBack, onLogin, onLogout, loggingOut, onHome, onRegionsChange, onBlocksChanged, onAdmin }) {
+export default function SettingsPage({ user, onBack, onLogin, onLogout, loggingOut, onHome, onRegionsChange, onBlocksChanged }) {
   const [profile, setProfile] = useState({ data: null, loading: true, error: "" });
   const [retry, setRetry] = useState(0);
   const [blocksOpen, setBlocksOpen] = useState(false);
@@ -92,13 +92,6 @@ export default function SettingsPage({ user, onBack, onLogin, onLogout, loggingO
       setProfile((old) => ({ ...old, data: { ...old.data, regions } }));
       onRegionsChange(regions);
     }} />}
-
-    {/* 관리자에게만 보인다. 숨김은 보조 수단이고 실제 차단은 서버가 한다(관리자가 아니면 /api/admin/** 가 404). */}
-    {profile.data?.admin && <section className={styles.list} aria-label="관리자">
-      <button className={styles.row} onClick={onAdmin}>
-        <span>신고함</span><Icon name="chevronRight" size={18} />
-      </button>
-    </section>}
 
     <section className={styles.list} aria-label="차단">
       <button className={styles.row} onClick={() => setBlocksOpen(true)}>
