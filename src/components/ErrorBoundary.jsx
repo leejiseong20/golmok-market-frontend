@@ -1,4 +1,5 @@
 import { Component } from "react";
+import { reportCrash } from "../api/errorReport.js";
 import { isChunkLoadError } from "../crash.js";
 import Modal from "./Modal.jsx";
 import styles from "./ErrorBoundary.module.css";
@@ -22,8 +23,12 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    // 밖으로 보내지 않는다(오류 수집 서비스를 쓰지 않는다). 개발자 도구에서 어느 경계가 잡았는지 보이게 이름을 붙인다.
-    console.error(`[오류 경계: ${this.props.name ?? "이름 없음"}]`, error, info?.componentStack);
+    const boundary = this.props.name ?? "이름 없음";
+    // 개발자 도구에서 어느 경계가 잡았는지 보이게 이름을 붙인다.
+    console.error(`[오류 경계: ${boundary}]`, error, info?.componentStack);
+    // 운영에서도 알 수 있게 서버 로그로 보낸다(외부 수집 서비스는 쓰지 않는다). 경로만 보내고, 실패해도 조용히 넘어간다.
+    reportCrash({ boundary, error, chunk: isChunkLoadError(error), componentStack: info?.componentStack,
+      pathname: window.location.pathname });
   }
 
   componentDidUpdate(previous) {

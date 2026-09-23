@@ -21,11 +21,18 @@ const product = (id, title) => ({ id, title, price: 10000, categoryId: 1, catego
  */
 async function mockApi(page, { broken = [], admin = false } = {}) {
   const errors = [];
+  // 화면이 서버로 보낸 오류 보고(POST /api/client-errors)의 본문.
+  const reports = [];
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.routeWebSocket((url) => url.pathname.startsWith("/api/ws"), () => {});
   await page.route((url) => url.pathname.startsWith("/api/"), async (route) => {
-    const url = new URL(route.request().url());
+    const request = route.request();
+    const url = new URL(request.url());
     const reply = (json, status = 200) => route.fulfill({ status, json });
+    if (url.pathname === "/api/client-errors") {
+      reports.push({ body: request.postDataJSON(), authorization: request.headers().authorization ?? null });
+      return route.fulfill({ status: 204 });
+    }
     const page1 = (content) => reply({ content, nextCursor: null, hasNext: false });
     if (url.pathname === "/api/categories") return reply([{ id: 1, name: "가구" }]);
     if (url.pathname === "/api/search/keywords/popular") {
@@ -59,13 +66,13 @@ async function mockApi(page, { broken = [], admin = false } = {}) {
         accessToken: "test-access", refreshToken: "test-refresh", user: { id: 1, nickname: "관리자" } }));
     }
   }, { region, admin });
-  return errors;
+  return { errors, reports };
 }
 
 const crashed = (scope) => scope.getByText("화면을 보여 드리지 못했어요");
 
 test("인기 검색어 응답이 망가져도 홈은 그대로 쓰고 그 영역만 사라진다", async ({ page }) => {
-  const errors = await mockApi(page, { broken: ["popular"] });
+  const { errors } = await mockApi(page, { broken: ["popular"] });
   await page.goto("/");
 
   await expect(page.locator("main").getByText("원목 식탁")).toBeVisible();
@@ -77,10 +84,15 @@ test("인기 검색어 응답이 망가져도 홈은 그대로 쓰고 그 영역
 });
 
 test("관리자 본문이 망가져도 관리자 메뉴가 남고, 다른 메뉴로 가면 풀린다", async ({ page }, info) => {
-  await mockApi(page, { broken: ["summary"], admin: true });
+  const { reports } = await mockApi(page, { broken: ["summary"], admin: true });
   await page.goto("/admin");
 
   await expect(crashed(page.locator("main"))).toBeVisible();
+  // 운영에서도 알 수 있게 서버로 보고한다. 로그인한 관리자여도 토큰은 싣지 않는다(사람을 가릴 값은 보내지 않는다).
+  await expect.poll(() => reports.length).toBe(1);
+  expect(reports[0].authorization).toBeNull();
+  expect(reports[0].body).toMatchObject({ boundary: "관리자 본문", kind: "RENDER", path: "/admin" });
+  expect(reports[0].body.message.length).toBeGreaterThan(0);
   const menu = page.getByRole("navigation", { name: "관리자 메뉴" });
   await expect(menu).toBeVisible();
   await expect(page.getByRole("button", { name: "사이트로 돌아가기" })).toBeVisible();
@@ -108,12 +120,16 @@ test("상품 상세 창이 망가지면 그 창만 안내로 바뀌고, 닫으�
 });
 
 test("앱 자체가 그리다 던지면 가장 바깥 안내가 뜨고 새로고침·홈으로를 준다", async ({ page }, info) => {
-  const errors = await mockApi(page, { broken: ["feed"] });
-  await page.goto("/");
+  const { errors, reports } = await mockApi(page, { broken: ["feed"] });
+  // 검색어가 주소에 있어도 보고에는 경로만 간다.
+  await page.goto("/?q=원목");
 
   await expect(crashed(page)).toBeVisible();
   await expect(page.getByRole("button", { name: "새로고침" })).toBeVisible();
   await expect(page.getByRole("button", { name: "홈으로" })).toBeVisible();
   await expect.poll(() => errors.some((text) => text.includes("오류 경계: 앱"))).toBe(true);
+  await expect.poll(() => reports.map((report) => report.body.boundary)).toContain("앱");
+  expect(reports.every((report) => report.body.path === "/")).toBe(true);
+  expect(JSON.stringify(reports)).not.toContain("원목");
   await page.screenshot({ path: info.outputPath("앱오류.png") });
 });
