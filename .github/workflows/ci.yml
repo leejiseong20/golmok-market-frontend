@@ -22,11 +22,12 @@ jobs:
         run: npm test
       - name: 빌드
         run: npm run build
-      # E2E 는 API 를 모킹해 백엔드 없이 돈다. 브라우저는 이 작업에서만 받는다(로컬은 설치된 Chrome 을 쓴다).
-      - name: E2E 브라우저 설치
-        run: npx playwright install --with-deps chromium
+      # E2E 는 API 를 모킹해 백엔드 없이 돈다.
+      # 실행기에 이미 깔려 있는 Chrome 을 쓴다 — 브라우저를 따로 받지 않고, 개발 PC 와 같은 브라우저로 돈다.
       - name: 모킹 E2E
         run: npm run test:e2e
+        env:
+          PW_CHANNEL: chrome
       - name: 실패하면 결과 보관
         if: failure()
         uses: actions/upload-artifact@v4
