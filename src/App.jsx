@@ -15,6 +15,7 @@ import ChatPage from "./components/ChatPage.jsx";
 import UserProfile from "./components/UserProfile.jsx";
 import ReportForm from "./components/ReportForm.jsx";
 import NotificationPanel from "./components/NotificationPanel.jsx";
+import AdminReports from "./components/AdminReports.jsx";
 import NotFound from "./components/NotFound.jsx";
 import Toaster from "./components/Toaster.jsx";
 import PopularKeywords from "./components/PopularKeywords.jsx";
@@ -108,9 +109,13 @@ export default function App() {
   const productId = parseId(productMatch?.params.id);
   const profileId = parseId(userMatch?.params.id);
   // 설정은 나의 골목에서 들어가는 화면이라 하단 탭도 "나의 골목"을 켠다.
+  // 관리자 화면(/admin)은 홈이 아니다. 홈으로 보면 카테고리 줄과 "상품 등록" 버튼이 함께 뜨고 하단 탭도 홈이 켜진다.
   const view = pageLocation.pathname.startsWith("/chat") ? "chat"
-    : pageLocation.pathname.startsWith("/my") || pageLocation.pathname.startsWith("/settings") ? "my" : "home";
+    : pageLocation.pathname.startsWith("/my") || pageLocation.pathname.startsWith("/settings") ? "my"
+    : pageLocation.pathname.startsWith("/admin") ? "admin" : "home";
 
+  // 관리자가 아니면 서버가 404 를 준다. 그때부터 이 주소는 없는 페이지다.
+  const [adminDenied, setAdminDenied] = useState(false);
   const [region, setRegion] = useState(savedRegion);
   const [categories, setCategories] = useState([]);
   const [categoryError, setCategoryError] = useState("");
@@ -594,7 +599,17 @@ export default function App() {
   const settingsScreen = <SettingsPage key={user?.id ?? "guest"} user={user} onBack={leaveSettings} onLogin={login}
     // 로그아웃하면 설정에 남을 이유가 없다. 나의 골목(로그인 안내)으로 바꿔치기한다.
     onLogout={async () => { if (await signOut()) navigate(paths.my(), { replace: true }); }} loggingOut={loggingOut} onHome={goHome}
-    onRegionsChange={applyPrimaryRegion} onBlocksChanged={blocksChanged} />;
+    onRegionsChange={applyPrimaryRegion} onBlocksChanged={blocksChanged}
+    onAdmin={() => goTo(paths.admin)} />;
+
+  /**
+   * 신고함(관리자). 비로그인은 로그인 안내만 보이고, 관리자가 아니면 목록 요청이 404 라 없는 페이지가 된다.
+   * 여기서 "권한 없음"을 보이면 관리자 화면이 있다는 사실이 드러난다.
+   */
+  const adminScreen = !user || adminDenied
+    ? <NotFound onHome={goHome} />
+    : <AdminReports onNotFound={() => setAdminDenied(true)}
+        onOpenProduct={(id) => openProduct(id)} onOpenProfile={(id) => openProfile(id)} />;
 
   return <>
     <a className="skip-link btn btn-primary btn-sm" href="#main">본문 바로가기</a>
@@ -615,6 +630,8 @@ export default function App() {
       <Route path="/my" element={myScreen} />
       <Route path="/my/:tab" element={myScreen} />
       <Route path="/settings" element={settingsScreen} />
+      {/* 관리자 전용. 권한 판단은 서버가 하고(404), 화면은 그때 없는 페이지로 바꾼다. */}
+      <Route path="/admin" element={adminScreen} />
       <Route path="*" element={<NotFound onHome={goHome} />} />
     </Routes>
     <BottomNav {...navigation} />

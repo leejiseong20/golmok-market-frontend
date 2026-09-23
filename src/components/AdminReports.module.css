@@ -1,0 +1,59 @@
+/* 신고함. 목록 화면은 설정 화면과 같은 폭·간격을 쓴다(관리자용이라고 다른 규칙을 만들지 않는다). */
+.shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--s5) var(--s4) calc(var(--nav-space) + var(--s8));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.head { display: grid; gap: var(--s1); }
+.title { font-size: var(--fs-title); font-weight: 700; letter-spacing: -0.02em; }
+.note { font-size: var(--fs-sm); line-height: 1.6; color: var(--ink-4); }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+.row {
+  width: 100%;
+  display: grid;
+  gap: var(--s1);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+.row:hover { border-color: var(--accent-border); }
+.rowTop { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.rowTop strong { font-size: var(--fs-body); overflow-wrap: anywhere; }
+.badges { display: flex; align-items: center; gap: var(--s2); flex-shrink: 0; }
+/* 여러 건 몰린 신고는 한 건짜리와 다르게 보여야 한다. 색만으로 구분하지 않고 글자로도 알린다. */
+.count { padding: 2px var(--s2); border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent); font-size: var(--fs-caption); font-weight: 600; }
+.status { padding: 2px var(--s2); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-caption); }
+.statusPENDING { background: var(--danger-bg); color: var(--danger); }
+.rowMeta { font-size: var(--fs-sm); color: var(--ink-4); }
+.detail { font-size: var(--fs-sm); color: var(--ink-3); overflow-wrap: anywhere; }
+
+/* 상세(모달 안) */
+.target { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) 0; border-bottom: 1px solid var(--line); }
+.targetName { font-size: var(--fs-body); font-weight: 600; overflow-wrap: anywhere; }
+.facts { display: grid; gap: var(--s2); margin: var(--s4) 0; }
+.facts > div { display: flex; gap: var(--s3); font-size: var(--fs-sm); }
+.facts dt { width: 72px; flex-shrink: 0; color: var(--ink-4); }
+.facts dd { margin: 0; color: var(--ink-2); }
+.detailBox { padding: var(--s3); border-radius: var(--radius-sm); background: var(--surface-2); line-height: 1.7; overflow-wrap: anywhere; }
+
+.sectionTitle { margin: var(--s5) 0 var(--s2); font-size: var(--fs-sm); font-weight: 600; color: var(--ink-3); }
+.others { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); font-size: var(--fs-sm); color: var(--ink-3); }
+.others > li { display: grid; gap: 2px; padding: var(--s2) var(--s3); border-radius: var(--radius-sm); background: var(--surface-2); }
+.otherDetail { color: var(--ink-4); overflow-wrap: anywhere; }
+
+.handle { display: grid; gap: var(--s2); margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--line); }
+.reason { display: grid; gap: var(--s2); font-size: var(--fs-sm); font-weight: 600; }
+.reason textarea { width: 100%; box-sizing: border-box; padding: var(--s3); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--field); color: var(--ink); font: inherit; font-weight: 400; resize: vertical; }
+.buttons { display: flex; gap: var(--s2); flex-wrap: wrap; margin-top: var(--s2); }
+
+@media (min-width: 880px) {
+  .shell { padding-top: var(--s7); padding-bottom: var(--s9); }
+}
