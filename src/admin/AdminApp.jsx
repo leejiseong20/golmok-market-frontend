@@ -1,4 +1,5 @@
-import { NavLink, Route, Routes } from "react-router";
+import { NavLink, Route, Routes, useLocation } from "react-router";
+import ErrorBoundary, { CrashNotice } from "../components/ErrorBoundary.jsx";
 import NotFound from "../components/NotFound.jsx";
 import { paths } from "../routes.js";
 import AdminActions from "./AdminActions.jsx";
@@ -27,6 +28,7 @@ const MENU = [
 ];
 
 export default function AdminApp({ onExit, onNotFound, onOpenProduct, onOpenProfile }) {
+  const { pathname } = useLocation();
   return <div className={styles.app}>
     <header className={styles.bar}>
       <div className={styles.inner}>
@@ -38,6 +40,9 @@ export default function AdminApp({ onExit, onNotFound, onOpenProduct, onOpenProf
         <button className={"btn btn-ghost btn-sm " + styles.exit} onClick={onExit}>사이트로 돌아가기</button>
       </div>
     </header>
+    {/* 관리자 본문 경계. 일반 헤더가 없으므로 본문이 망가져도 관리자 메뉴·사이트로 돌아가기는 남긴다. */}
+    <ErrorBoundary name="관리자 본문" resetKey={pathname}
+      fallback={({ chunk, reset }) => <CrashNotice chunk={chunk} onRetry={reset} />}>
     <Routes>
       {/* 첫 화면은 현황판이다. 처리할 일이 있는지 먼저 보고 해당 목록으로 간다. */}
       <Route index element={<AdminDashboard onNotFound={onNotFound} />} />
@@ -48,5 +53,6 @@ export default function AdminApp({ onExit, onNotFound, onOpenProduct, onOpenProf
       <Route path="actions" element={<AdminActions onNotFound={onNotFound} />} />
       <Route path="*" element={<NotFound onHome={onExit} />} />
     </Routes>
+    </ErrorBoundary>
   </div>;
 }

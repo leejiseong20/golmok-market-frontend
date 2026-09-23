@@ -68,11 +68,12 @@ export function useSearchFilters() {
 /**
  * 다른 관리 화면에서 "이 대상 열기"로 넘어왔는지. 주소가 아니라 navigate state 로 받는다 —
  * 주소 쿼리가 바뀌면 App 이 스크롤을 맨 위로 옮겨, 상세를 열고 닫을 때마다 목록 위치를 잃는다.
+ * location.key 는 이 라우터 설정에서 늘 "default" 라(App 참고) 이동마다 새로 만들어지는 state 객체로 알아챈다.
  */
 export function useOpenRequest(setOpenId) {
-  const location = useLocation();
+  const { state } = useLocation();
   useEffect(() => {
-    const requested = Number(location.state?.open);
+    const requested = Number(state?.open);
     if (Number.isSafeInteger(requested) && requested > 0) setOpenId(requested);
-  }, [location.key]);
+  }, [state]);
 }

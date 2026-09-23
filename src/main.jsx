@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App.jsx";
+import ErrorBoundary, { CrashNotice } from "./components/ErrorBoundary.jsx";
 import "./index.css";
 import { watchViewport } from "./viewport.js";
 import { watchInputMode } from "./inputMode.js";
@@ -34,8 +35,15 @@ registerServiceWorker({
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    {/*
+      가장 바깥 경계. App 안의 경계가 잡지 못한 오류(App 자신이 그리다 던진 것 등)가 여기로 온다.
+      라우터 밖에 두어 라우터가 망가져도 보인다. 그래서 "홈으로"는 주소를 직접 바꾼다(새로 불러온다).
+    */}
+    <ErrorBoundary name="앱" fallback={({ chunk }) =>
+      <CrashNotice full chunk={chunk} onHome={() => window.location.assign("/")} />}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 );

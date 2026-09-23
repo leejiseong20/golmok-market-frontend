@@ -1,0 +1,9 @@
+/* 오류 안내. 없는 페이지(NotFound)와 같은 모양을 쓴다 — 사용자에게는 둘 다 "여기서는 볼 수 없다"는 안내다. */
+.shell { max-width: 560px; margin: 0 auto; padding: 48px 16px 120px; }
+/* 가장 바깥 경계: 헤더가 없을 수 있어 화면 가운데에 둔다. */
+.full { min-height: 100vh; min-height: 100dvh; display: grid; align-content: center; padding-bottom: 48px; }
+.box { padding: 48px 20px; text-align: center; background: var(--surface-2); border-radius: var(--radius); }
+.title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.sub { margin-top: 8px; color: var(--ink-4); font-size: 14px; line-height: 1.6; }
+.buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s5); }
+.dialog .buttons { justify-content: flex-start; }

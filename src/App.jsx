@@ -16,6 +16,7 @@ import UserProfile from "./components/UserProfile.jsx";
 import ReportForm from "./components/ReportForm.jsx";
 import NotificationPanel from "./components/NotificationPanel.jsx";
 import NotFound from "./components/NotFound.jsx";
+import ErrorBoundary, { CrashDialog, CrashNotice } from "./components/ErrorBoundary.jsx";
 import Toaster from "./components/Toaster.jsx";
 import PopularKeywords from "./components/PopularKeywords.jsx";
 import EmptyState from "./components/EmptyState.jsx";
@@ -396,6 +397,14 @@ export default function App() {
     goTo(paths.user(id), { state: { background: pageLocation } });
   }
   /** 모달 닫기. 앱 안에서 열었으면 뒤로가기(아래 화면이 그대로 남는다), 주소로 바로 들어왔으면 홈으로 바꿔치기. */
+  /** 창 경계가 잡았을 때: 떠 있는 창을 모두 닫는다. 어느 창이 망가졌는지 가리지 않는다(다시 열면 된다). */
+  function closeAllWindows() {
+    setModal(null);
+    setEditor(null);
+    setReporting(null);
+    if (productId || profileId) closeModal();
+  }
+
   function closeModal() {
     if (location.state?.background) navigate(-1);
     else goTo(paths.home, { replace: true });
@@ -551,7 +560,10 @@ export default function App() {
   const navigation = { user, view, chatUnreadCount, onLogin: login,
     onHome: goHome, onMyPage: () => go(paths.my()), onChat: () => go(paths.chat),
     onRegionClick: () => setModal("region") };
-  const categoryBar = <CategoryBar categories={categories} value={categoryId} onChange={(value) => changeHomeQuery({ categoryId: value })} />;
+  // 카테고리 줄·인기 검색어·사이드바는 부가 영역이다. 망가지면 조용히 숨기고 나머지 화면은 그대로 쓴다.
+  const categoryBar = <ErrorBoundary name="카테고리" resetKey={categories}>
+    <CategoryBar categories={categories} value={categoryId} onChange={(value) => changeHomeQuery({ categoryId: value })} />
+  </ErrorBoundary>;
   const selectRoom = (id, options) => goTo(id ? paths.chatRoom(id) : paths.chat, options);
 
   /** 상세 안에서 상태 변경·끌어올리기를 했다. 같은 상세에 머물며 목록만 새로 받는다. */
@@ -599,7 +611,9 @@ export default function App() {
       {/* 이 줄이 화면 가까이 오면 다음 페이지를 부른다. 실패하면 멈추고 위의 "다시 시도"를 기다린다(자동 재시도는 요청을 쏟아낸다). */}
       {feed.hasNext && !feed.loading && !feed.loadingMore && !feed.error && <InfiniteTrigger onReach={more} />}
     </section>
-    <Sidebar onRegionClick={navigation.onRegionClick} onKeyword={(value) => changeHomeQuery({ keyword: value })} />
+    <ErrorBoundary name="사이드바">
+      <Sidebar onRegionClick={navigation.onRegionClick} onKeyword={(value) => changeHomeQuery({ keyword: value })} />
+    </ErrorBoundary>
   </main>;
   const chatScreen = <ChatScreen user={user} onHome={goHome} onLogin={login} onSelectRoom={selectRoom}
     onOpenProduct={openProduct} onOpenProfile={openProfile}
@@ -643,7 +657,12 @@ export default function App() {
     </Header>}
     {view === "home" && <div className={styles.mobileOnly}>{categoryBar}
       {/* 검색 중에는 결과에 집중하도록 인기 검색어를 숨긴다. */}
-      {!keyword && <PopularKeywords variant="chips" onSelect={(value) => changeHomeQuery({ keyword: value })} />}</div>}
+      {!keyword && <ErrorBoundary name="인기 검색어">
+        <PopularKeywords variant="chips" onSelect={(value) => changeHomeQuery({ keyword: value })} />
+      </ErrorBoundary>}</div>}
+    {/* 본문 경계. 헤더·하단 탭은 밖에 있어 본문이 망가져도 다른 화면으로 갈 수 있다. 주소가 바뀌면 풀린다. */}
+    <ErrorBoundary name="본문" resetKey={pageLocation.pathname}
+      fallback={({ chunk, reset }) => <CrashNotice chunk={chunk} onRetry={reset} onHome={goHome} />}>
     <Routes location={pageLocation}>
       <Route path="/" element={homePage} />
       {/* 상세·프로필 주소로 바로 들어오면 홈 위에 모달을 띄운다. */}
@@ -658,6 +677,7 @@ export default function App() {
       <Route path="/admin/*" element={adminScreen} />
       <Route path="*" element={<NotFound onHome={goHome} />} />
     </Routes>
+    </ErrorBoundary>
     {!inAdmin && <BottomNav {...navigation} />}
     {/*
       상품 등록 버튼은 홈에서만 띄운다. 채팅에서는 전송 버튼을 가리고, 나의 골목·설정에서는 쓸 일이 없다.
@@ -666,11 +686,13 @@ export default function App() {
     {showWriteButton && <button className={styles.writeButton} onClick={writeProduct} aria-label="상품 등록">
       <span className={styles.writeIcon} aria-hidden="true">＋</span><span className={styles.writeLabel}>상품 등록</span></button>}
     {!inAdmin && <footer className={styles.footer + " " + styles.pcOnly + (showWriteButton ? " " + styles.footerClear : "")}><div className={styles.footerInner}><span>골목마켓 · 동네 기반 중고거래 플랫폼</span><span>이웃의 물건에 새로운 일상을</span></div></footer>}
+    {/* 창 경계. 창 하나가 망가져도 밑의 화면은 그대로 두고, 그 창만 닫게 한다. 주소가 바뀌면(창을 닫으면) 풀린다. */}
+    <ErrorBoundary name="창" resetKey={location.pathname}
+      fallback={({ chunk, reset }) => <CrashDialog chunk={chunk} onClose={() => { closeAllWindows(); reset(); }} />}>
     {modal === "auth" && <AuthModal onClose={() => setModal(null)} />}
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
     {modal === "notifications" && user && <NotificationPanel onClose={() => setModal(null)} onNavigate={openNotificationTarget}
       onRead={() => setUnreadCount((value) => Math.max(0, value - 1))} onAllRead={() => setUnreadCount(0)} />}
-    <Toaster />
     {detail && <ProductDetail key={detail.key} detail={detail} onClose={closeModal}
       onRetry={() => setDetailRetry((value) => value + 1)}
       onEdit={(product) => { setEditor({ product }); closeModal(); }} onChanged={detailChanged} onStartChat={startChat}
@@ -689,5 +711,7 @@ export default function App() {
       onClose={() => setReporting(null)}
       onBlock={reporting.blockTarget && reporting.blockTarget.id !== user?.id
         ? async () => { if (await blockPerson(reporting.blockTarget)) setReporting(null); } : undefined} />}
+    </ErrorBoundary>
+    <Toaster />
   </>;
 }
