@@ -11,7 +11,7 @@ const channel = process.env.PW_CHANNEL || undefined;
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: ["**/app.spec.js", "**/chat.spec.js", "**/admin.spec.js", "**/errors.spec.js"],
+  testMatch: ["**/app.spec.js", "**/chat.spec.js", "**/admin.spec.js", "**/errors.spec.js", "**/server-down.spec.js"],
   fullyParallel: false,
   workers: 1,
   reporter: "list",

@@ -1,0 +1,30 @@
+/* 데모 서버 상태 띠. 오류(빨강)가 아니라 안내라서 강조색 옅은 바탕을 쓴다 — 사용자가 잘못한 것이 없다. */
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3) var(--s4);
+  /* 본문(App .shell)과 같은 폭: 모바일은 좌우 --s4, PC 는 --s6 여백. */
+  box-sizing: border-box;
+  width: calc(100% - 2 * var(--s4));
+  max-width: calc(var(--shell-max) - 2 * var(--s4));
+  margin: var(--s3) auto 0;
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--accent-border);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.ok { border-color: var(--line-strong); background: var(--surface-2); }
+
+.body { display: grid; gap: var(--s1); flex: 1 1 280px; min-width: 0; }
+.title { font-size: var(--fs-body); font-weight: 700; }
+.text { margin: 0; font-size: var(--fs-sm); line-height: 1.6; color: var(--ink-3); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--s2); }
+
+@media (min-width: 880px) {
+  .banner { width: calc(100% - 2 * var(--s6)); max-width: calc(var(--shell-max) - 2 * var(--s6)); }
+}

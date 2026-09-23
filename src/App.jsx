@@ -17,6 +17,7 @@ import ReportForm from "./components/ReportForm.jsx";
 import NotificationPanel from "./components/NotificationPanel.jsx";
 import NotFound from "./components/NotFound.jsx";
 import ErrorBoundary, { CrashDialog, CrashNotice } from "./components/ErrorBoundary.jsx";
+import ServerDownBanner from "./components/ServerDownBanner.jsx";
 import Toaster from "./components/Toaster.jsx";
 import PopularKeywords from "./components/PopularKeywords.jsx";
 import EmptyState from "./components/EmptyState.jsx";
@@ -33,6 +34,7 @@ import { disablePush } from "./push.js";
 import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavorite } from "./api/productApi.js";
 import { homeSearch, isAppPath, MY_TABS, parseHomeQuery, parseId, paths } from "./routes.js";
 import { toast } from "./toast.js";
+import { serverStatus } from "./serverStatus.js";
 import styles from "./App.module.css";
 
 // 관리자 영역은 관리자만 쓴다. 일반 사용자의 첫 화면 용량에 넣지 않도록 들어갈 때 불러온다.
@@ -102,6 +104,9 @@ function InfiniteTrigger({ onReach }) {
 
 export default function App() {
   const session = useSyncExternalStore(client.subscribe, client.getSession);
+  // 데모 서버가 꺼져 있으면 안내 띠 하나로 설명하고, 같은 이유의 오류 줄·스켈레톤은 숨긴다.
+  const serverState = useSyncExternalStore(serverStatus.subscribe, serverStatus.getState);
+  const serverDown = serverState === "down";
   // 화면 모드. 고른 값이 없으면 시스템 설정을 따르므로 effective() 를 그대로 읽는다.
   const user = session?.user;
   const location = useLocation();
@@ -179,6 +184,13 @@ export default function App() {
       .catch(() => { if (!abort.signal.aborted) setAdmin(false); });
     return () => abort.abort();
   }, [user?.id]);
+
+  // 데모 서버가 다시 켜지면 홈의 카테고리·목록을 다시 부른다. 꺼진 동안 숨겨 둔 오류가 그대로 드러나지 않게 한다.
+  useEffect(() => {
+    if (serverState !== "recovered") return;
+    setCategoryRetry((value) => value + 1);
+    setRetry((value) => value + 1);
+  }, [serverState]);
 
   // 뒤로가기로 검색 조건이 바뀌면 입력창도 주소를 따라간다.
   useEffect(() => { setSearch(keyword); }, [keyword]);
@@ -586,7 +598,7 @@ export default function App() {
 
   const homePage = <main className={styles.shell} id="main" tabIndex={-1}>
     <section aria-label="상품 목록">
-      {categoryError && <div className={styles.error} role="alert">{categoryError}<button className="btn btn-outline btn-sm" onClick={() => setCategoryRetry((value) => value + 1)}>카테고리 다시 시도</button></div>}
+      {categoryError && !serverDown && <div className={styles.error} role="alert">{categoryError}<button className="btn btn-outline btn-sm" onClick={() => setCategoryRetry((value) => value + 1)}>카테고리 다시 시도</button></div>}
       <div className={styles.feedHead}>
         <div>
           <h1 className={styles.title}>{region ? region.dong + "의 이웃 물건" : "우리 동네에서 발견하는 좋은 물건"}</h1>
@@ -600,8 +612,8 @@ export default function App() {
       </div>
       {!region && <EmptyState title="먼저 둘러볼 동네를 선택해 주세요" description="동네를 고르면 근처 이웃이 올린 물건을 보여드려요."
         actionLabel="동네 선택하기" onAction={() => setModal("region")} />}
-      {feed.loading && <ProductListSkeleton />}
-      {feed.error && <div className={styles.error} role="alert">{feed.error}<button className="btn btn-outline btn-sm" onClick={() => feed.items.length ? more() : setRetry((value) => value + 1)}>다시 시도</button></div>}
+      {feed.loading && !serverDown && <ProductListSkeleton />}
+      {feed.error && !serverDown && <div className={styles.error} role="alert">{feed.error}<button className="btn btn-outline btn-sm" onClick={() => feed.items.length ? more() : setRetry((value) => value + 1)}>다시 시도</button></div>}
       {region && !feed.loading && !feed.error && feed.items.length === 0 &&
         <EmptyState title={keyword ? `"${keyword}" 검색 결과가 없어요` : "아직 이 동네에 올라온 물건이 없어요"}
           description="다른 동네나 검색어로 찾아보거나, 첫 물건을 올려보세요." />}
@@ -655,6 +667,8 @@ export default function App() {
       admin={admin === true} onAdmin={() => goTo(paths.admin)}>
       {categoryBar}
     </Header>}
+    {/* 관리자 영역은 자기 틀 안(관리자 메뉴 아래)에 같은 띠를 둔다. */}
+    {!inAdmin && <ServerDownBanner />}
     {view === "home" && <div className={styles.mobileOnly}>{categoryBar}
       {/* 검색 중에는 결과에 집중하도록 인기 검색어를 숨긴다. */}
       {!keyword && <ErrorBoundary name="인기 검색어">

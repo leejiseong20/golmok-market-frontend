@@ -1,3 +1,5 @@
+import { classifyResponse, serverStatus } from "../serverStatus.js";
+
 const SESSION_KEY = "golmok.session";
 
 export class ApiError extends Error {
@@ -14,8 +16,11 @@ export class ApiError extends Error {
  * 저장소가 둘이다. storage 는 탭을 닫으면 사라지고(sessionStorage),
  * persistentStorage 는 남는다(localStorage). 로그인할 때 "로그인 상태 유지"로 어디에 둘지 고른다.
  * 세션은 언제나 한 곳에만 있다(고른 쪽에 쓰고 다른 쪽은 지운다).
+ *
+ * onServerResponse 는 응답마다 서버가 살아서 답했는지("up" | "down")를 받는다(serverStatus.js — 데모 서버 꺼짐 안내).
  */
-export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fetch(...args), storage, persistentStorage } = {}) {
+export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fetch(...args), storage, persistentStorage,
+  onServerResponse = () => {} } = {}) {
   const listeners = new Set();
   let session = null;
   let generation = 0;
@@ -64,6 +69,7 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
       });
     } catch (error) {
       if (error.name === "AbortError") throw error;
+      onServerResponse(classifyResponse({ networkError: true }));
       throw new ApiError("서버에 연결할 수 없습니다. 연결 상태를 확인하고 다시 시도해 주세요.");
     }
     /*
@@ -75,8 +81,10 @@ export function createApiClient({ baseUrl = "/api", fetchImpl = (...args) => fet
     try { text = await response.text(); }
     catch (error) {
       if (error.name === "AbortError") throw error;
+      onServerResponse(classifyResponse({ networkError: true }));
       throw new ApiError("서버 응답을 끝까지 받지 못했습니다. 다시 시도해 주세요.", { status: response.status });
     }
+    onServerResponse(classifyResponse({ status: response.status, text }));
     if (!text) {
       if (response.ok) return null;
       throw new ApiError("요청을 처리하지 못했습니다.", { status: response.status, code: "INVALID_RESPONSE" });
@@ -183,4 +191,5 @@ export const client = createApiClient({
   baseUrl: import.meta.env?.VITE_API_BASE || "/api",
   storage: tabStorage,
   persistentStorage: keepStorage,
+  onServerResponse: serverStatus.report,
 });

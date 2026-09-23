@@ -39,3 +39,6 @@
 @media (min-width: 880px) {
   .aside { display: block; }
 }
+
+/* 인기 검색어가 스스로 숨으면(데모 서버 꺼짐 등) 빈 카드 테두리만 남지 않게 한다. */
+.panel:empty { display: none; }

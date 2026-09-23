@@ -10,6 +10,7 @@ import { registerServiceWorker } from "./pwa.js";
 import { toast } from "./toast.js";
 import { client } from "./api/client.js";
 import { syncPushAccount } from "./push.js";
+import { serverStatus } from "./serverStatus.js";
 
 let pushAccount;
 function updatePushAccount() {
@@ -20,6 +21,10 @@ function updatePushAccount() {
 }
 client.subscribe(updatePushAccount);
 updatePushAccount();
+
+// 데모 서버가 살아 있는지 한 번 확인한다. 서버(EC2)가 꺼져 있으면 연결이 오래 매달려 스켈레톤만 보일 수 있어,
+// 제한 시간(8초)을 둔 가벼운 요청으로 빨리 알아챈다. 결과는 ServerDownBanner 가 보여 준다.
+serverStatus.check();
 
 // 모바일 키보드가 덮은 높이를 CSS 변수로 알려 준다(채팅방·하단 탭이 이 값을 쓴다).
 watchViewport();

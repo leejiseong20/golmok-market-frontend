@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes, useLocation } from "react-router";
 import ErrorBoundary, { CrashNotice } from "../components/ErrorBoundary.jsx";
 import NotFound from "../components/NotFound.jsx";
+import ServerDownBanner from "../components/ServerDownBanner.jsx";
 import { paths } from "../routes.js";
 import AdminActions from "./AdminActions.jsx";
 import AdminDashboard from "./AdminDashboard.jsx";
@@ -40,6 +41,7 @@ export default function AdminApp({ onExit, onNotFound, onOpenProduct, onOpenProf
         <button className={"btn btn-ghost btn-sm " + styles.exit} onClick={onExit}>사이트로 돌아가기</button>
       </div>
     </header>
+    <ServerDownBanner />
     {/* 관리자 본문 경계. 일반 헤더가 없으므로 본문이 망가져도 관리자 메뉴·사이트로 돌아가기는 남긴다. */}
     <ErrorBoundary name="관리자 본문" resetKey={pathname}
       fallback={({ chunk, reset }) => <CrashNotice chunk={chunk} onRetry={reset} />}>

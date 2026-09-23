@@ -8,7 +8,7 @@
     "build": "vite build",
     "icons": "node scripts/make-icons.mjs",
     "preview": "vite preview",
-    "test": "node --test src/api/client.test.js src/api/chatSocket.test.js src/api/reviewApi.test.js src/api/notificationApi.test.js src/toast.test.js src/api/accountApi.test.js src/api/imageUrl.test.js src/data/reorder.test.js src/data/priceInput.test.js src/viewport.test.js src/inputMode.test.js src/routes.test.js src/theme.test.js src/pwa.test.js src/api/reportApi.test.js src/push.test.js src/sw.test.js src/crash.test.js src/api/errorReport.test.js",
+    "test": "node --test src/api/client.test.js src/api/chatSocket.test.js src/api/reviewApi.test.js src/api/notificationApi.test.js src/toast.test.js src/api/accountApi.test.js src/api/imageUrl.test.js src/data/reorder.test.js src/data/priceInput.test.js src/viewport.test.js src/inputMode.test.js src/routes.test.js src/theme.test.js src/pwa.test.js src/api/reportApi.test.js src/push.test.js src/sw.test.js src/crash.test.js src/api/errorReport.test.js src/serverStatus.test.js",
     "test:e2e": "playwright test",
     "test:e2e:live": "playwright test --config playwright.live.config.js"
   },

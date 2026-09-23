@@ -21,8 +21,8 @@ npm run dev     # http://127.0.0.1:5173
 |---|---|
 | `npm run dev` | 개발 서버 |
 | `npm run build` | 프로덕션 번들 |
-| `npm test` | 단위 테스트 127개(node:test) — API 클라이언트·채팅 소켓·푸시·서비스 워커·주소 규칙·오류 보고 등 |
-| `npm run test:e2e` | Playwright E2E 38개(PC·모바일). API 와 WebSocket 을 모킹하므로 백엔드 없이 돈다 |
+| `npm test` | 단위 테스트 132개(node:test) — API 클라이언트·채팅 소켓·푸시·서비스 워커·주소 규칙·오류 보고 등 |
+| `npm run test:e2e` | Playwright E2E 42개(PC·모바일). API 와 WebSocket 을 모킹하므로 백엔드 없이 돈다 |
 | `npm run test:e2e:live` | 실제 MySQL 백엔드에 붙이는 E2E(상품 쓰기·후기) |
 | `npm run icons` | 앱 아이콘 PNG 재생성(`scripts/make-icons.mjs`) |
 
@@ -37,6 +37,7 @@ src/
   App.jsx                  화면 조립. 주소 → 페이지·모달, 동네·찜·상세 상태, 본문·창·부가 영역 오류 경계
   routes.js                주소 만들기·해석, 알림 경로 허용 목록
   crash.js                 오류 종류 판별(나눠진 파일을 받지 못한 오류인지)
+  serverStatus.js          데모 서버가 살아 있는지(꺼짐 판정·8초 확인·30초마다 다시 확인)
   toast.js · theme.js      공용 토스트 · 화면 모드
   push.js · pwa.js         웹 푸시 구독 · 서비스 워커 등록
   viewport.js · inputMode.js  모바일 키보드 높이 · 입력 방식(초점 링)
@@ -48,6 +49,7 @@ src/
     *.js                   엔드포인트별 얇은 함수(인증·상품·동네·채팅·거래·후기·알림·신고·차단·푸시·검색)
   components/
     ErrorBoundary.jsx      오류 경계 + 본문 안내 + 창 안내
+    ServerDownBanner.jsx   데모 서버가 꺼져 있을 때의 안내 띠(화면 캡처 링크·다시 확인)
     Header · BottomNav · CategoryBar · Sidebar · PopularKeywords   틀과 탐색
     ProductCard · ProductDetail · ProductForm · PhotoSorter · Lightbox   상품
     ChatPage · ChatList · ChatRoom   채팅(목록·방·직거래 줄)
@@ -73,6 +75,7 @@ public/sw.js               서비스 워커(사진·번들 캐시, API 는 캐�
 - **채팅 메시지 전송은 REST, 수신은 WebSocket 이다.** 내가 보낸 메시지는 두 경로로 두 번 올 수 있어 `id`로 중복을 거른다. 재연결되면 REST 로 다시 불러온다(끊긴 동안의 이벤트는 다시 오지 않는다).
 - **관리자 영역은 같은 앱 안의 별도 틀이다(`/admin/*`).** 일반 헤더·하단 탭 없이 자기 메뉴를 쓰고, 코드는 `React.lazy` 로 나눠 일반 사용자의 첫 화면 파일에 넣지 않는다. 권한 판단은 서버가 한다 — 관리자가 아니면 서버가 404 를 주고 화면은 "권한 없음" 대신 없는 페이지를 보인다(관리자 기능의 존재를 드러내지 않는다). 이때도 **코드(`RESOURCE_NOT_FOUND`)로만** 판단한다. 없는 회원·상품도 404 라 상태 코드로 가르면 관리자가 쫓겨난다.
 - **오류 경계는 여러 겹이다.** 한 겹이면 인기 검색어 하나가 망가져도 사이트 전체가 멈춘다. 부가 영역(카테고리·인기 검색어·사이드바)은 조용히 숨기고, 본문은 그 자리만 안내로 바꾸며(헤더·하단 탭은 남고 주소가 바뀌면 풀린다), 창은 창만 닫게 하고, 관리자 본문은 관리자 메뉴를 남긴다. 배포로 나눠진 파일 이름이 바뀌어 받지 못한 오류는 다시 시도로 풀리지 않아 새로고침만 권한다. 잡은 오류는 서버 로그로 보고한다(토큰·쿼리 없이).
+- **데모 서버가 꺼져 있으면 안내 띠 하나로 알린다.** 백엔드가 수업용 AWS 환경(Learner Lab)이라 세션이 끝나면 꺼진다. 그때 화면 곳곳에 빨간 오류 줄만 뜨면 보러 온 사람이 이유를 모른다. 연결 실패·502·503·504·JSON 아닌 응답·8초 무응답을 "꺼짐"으로 보고(서버가 JSON 으로 답했으면 4xx 여도 "켜짐"), 헤더 아래 띠에서 이유와 화면 캡처 링크를 보여 주며 같은 이유의 오류 줄은 숨긴다. 켜지면 홈 목록을 저절로 다시 부른다.
 
 ## 반응형
 

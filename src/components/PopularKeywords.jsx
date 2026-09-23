@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { fetchPopularKeywords } from "../api/searchApi.js";
+import { serverStatus } from "../serverStatus.js";
 import styles from "./PopularKeywords.module.css";
 
 /**
@@ -11,6 +12,14 @@ import styles from "./PopularKeywords.module.css";
 export default function PopularKeywords({ variant = "list", onSelect }) {
   const [state, setState] = useState({ items: [], loading: true, error: "" });
   const [retry, setRetry] = useState(0);
+  // 데모 서버가 꺼져 있으면 이유는 안내 띠가 말한다. 여기서 또 "불러오지 못했어요"를 띄우지 않고 패널을 숨긴다.
+  const serverState = useSyncExternalStore(serverStatus.subscribe, serverStatus.getState);
+  const serverDown = serverState === "down";
+
+  // 서버가 다시 켜지면 한 번 더 부른다(꺼진 동안 실패한 채로 남지 않게).
+  useEffect(() => {
+    if (serverState === "recovered") setRetry((value) => value + 1);
+  }, [serverState]);
 
   useEffect(() => {
     const abort = new AbortController();
@@ -20,6 +29,8 @@ export default function PopularKeywords({ variant = "list", onSelect }) {
       .catch((error) => { if (!abort.signal.aborted) setState({ items: [], loading: false, error: error.message }); });
     return () => abort.abort();
   }, [retry]);
+
+  if (serverDown && state.error) return null;
 
   if (variant === "chips") {
     if (state.loading || state.error || state.items.length === 0) return null;
