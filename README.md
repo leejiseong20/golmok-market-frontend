@@ -22,7 +22,7 @@ npm run dev     # http://127.0.0.1:5173
 | `npm run dev` | 개발 서버 |
 | `npm run build` | 프로덕션 번들 |
 | `npm test` | 단위 테스트 135개(node:test) — API 클라이언트·채팅 소켓·푸시·서비스 워커·주소 규칙·오류 보고 등 |
-| `npm run test:e2e` | Playwright E2E 44개(PC·모바일). API 와 WebSocket 을 모킹하므로 백엔드 없이 돈다 |
+| `npm run test:e2e` | Playwright E2E 50개(PC·모바일). API 와 WebSocket 을 모킹하므로 백엔드 없이 돈다 |
 | `npm run test:e2e:live` | 실제 MySQL 백엔드에 붙이는 E2E(상품 쓰기·후기) |
 | `npm run icons` | 앱 아이콘 PNG 재생성(`scripts/make-icons.mjs`) |
 
@@ -34,7 +34,13 @@ E2E 는 `PW_CHANNEL=chrome` 이면 설치된 Chrome 으로 돈다(CI 도 같은 
 src/
   main.jsx                 엔트리. 가장 바깥 오류 경계, 서비스 워커 등록, 푸시 계정 동기화
   index.css                전역 리셋 + 디자인 토큰(CSS 변수, 밝게·어둡게)
-  App.jsx                  화면 조립. 주소 → 페이지·모달, 동네·찜·상세 상태, 본문·창·부가 영역 오류 경계
+  App.jsx                  화면 조립. 주소 해석·이동, 여러 덩어리를 잇는 동작(찜·차단·저장·로그아웃), 창 목록, 오류 경계 배치
+  app/                     App 만 쓰는 조각
+    HomePage.jsx           홈 화면(목록·빈 상태·오류·사이드바)
+    useHomeFeed.js         홈 목록·무한 스크롤·늦은 응답 버리기    useCategories.js  카테고리
+    useProductDetail.js    상품 상세(기록 항목별 캐시 — 조회수 두 번 방지)
+    useBadges.js           채팅 실시간 연결·알림/채팅 뱃지    useAdminAccess.js  관리자 여부
+    useScrollRestoration.js  주소별 스크롤 위치 저장·복원    routeScreens.jsx  RequireId·ChatScreen·MyScreen
   routes.js                주소 만들기·해석, 알림 경로 허용 목록
   crash.js                 오류 종류 판별(나눠진 파일을 받지 못한 오류인지)
   serverStatus.js          데모 서버가 살아 있는지(꺼짐 판정·8초 확인·30초마다 다시 확인)

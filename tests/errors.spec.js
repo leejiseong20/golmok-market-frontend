@@ -119,17 +119,36 @@ test("상품 상세 창이 망가지면 그 창만 안내로 바뀌고, 닫으�
   await expect(crashed(page)).toHaveCount(0);
 });
 
-test("앱 자체가 그리다 던지면 가장 바깥 안내가 뜨고 새로고침·홈으로를 준다", async ({ page }, info) => {
+test("홈 목록이 망가지면 본문 자리만 안내로 바뀌고 헤더는 남는다", async ({ page }, info) => {
+  // 예전에는 홈 목록을 App 이 직접 그려 여기서 던지면 가장 바깥 경계까지 갔다. HomePage 로 떼면서 본문 경계가 잡는다.
   const { errors, reports } = await mockApi(page, { broken: ["feed"] });
   // 검색어가 주소에 있어도 보고에는 경로만 간다.
   await page.goto("/?q=원목");
+
+  await expect(crashed(page.locator("main"))).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도" })).toBeVisible();
+  // 헤더는 그대로 쓸 수 있다(검색창).
+  await expect(page.getByRole("searchbox", { name: "상품 검색어" })).toBeVisible();
+  await expect.poll(() => errors.some((text) => text.includes("오류 경계: 본문"))).toBe(true);
+  await expect.poll(() => reports.map((report) => report.body.boundary)).toContain("본문");
+  expect(reports.every((report) => report.body.path === "/")).toBe(true);
+  expect(JSON.stringify(reports)).not.toContain("원목");
+  await page.screenshot({ path: info.outputPath("홈목록오류.png") });
+});
+
+test("App 이 직접 그리는 곳(헤더)이 던지면 가장 바깥 안내가 뜨고 새로고침·홈으로를 준다", async ({ page }, info) => {
+  const { errors, reports } = await mockApi(page);
+  // 저장된 세션의 닉네임이 글자가 아니면(손상된 저장소) 헤더가 그리다 던진다. 헤더는 본문 경계 밖이다.
+  await page.addInitScript(() => {
+    localStorage.setItem("golmok.session", JSON.stringify({
+      accessToken: "test-access", refreshToken: "test-refresh", user: { id: 1, nickname: { broken: true } } }));
+  });
+  await page.goto("/");
 
   await expect(crashed(page)).toBeVisible();
   await expect(page.getByRole("button", { name: "새로고침" })).toBeVisible();
   await expect(page.getByRole("button", { name: "홈으로" })).toBeVisible();
   await expect.poll(() => errors.some((text) => text.includes("오류 경계: 앱"))).toBe(true);
   await expect.poll(() => reports.map((report) => report.body.boundary)).toContain("앱");
-  expect(reports.every((report) => report.body.path === "/")).toBe(true);
-  expect(JSON.stringify(reports)).not.toContain("원목");
   await page.screenshot({ path: info.outputPath("앱오류.png") });
 });

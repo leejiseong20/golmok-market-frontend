@@ -1,17 +1,13 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
-import { matchPath, Route, Routes, useLocation, useNavigate, useParams } from "react-router";
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { matchPath, Route, Routes, useLocation, useNavigate } from "react-router";
 import Header from "./components/Header.jsx";
 import CategoryBar from "./components/CategoryBar.jsx";
-import ProductCard from "./components/ProductCard.jsx";
-import Sidebar from "./components/Sidebar.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import RegionPicker from "./components/RegionPicker.jsx";
 import ProductDetail from "./components/ProductDetail.jsx";
 import ProductForm from "./components/ProductForm.jsx";
-import MyPage from "./components/MyPage.jsx";
 import SettingsPage from "./components/SettingsPage.jsx";
-import ChatPage from "./components/ChatPage.jsx";
 import UserProfile from "./components/UserProfile.jsx";
 import ReportForm from "./components/ReportForm.jsx";
 import NotificationPanel from "./components/NotificationPanel.jsx";
@@ -20,19 +16,22 @@ import ErrorBoundary, { CrashDialog, CrashNotice } from "./components/ErrorBound
 import ServerDownBanner from "./components/ServerDownBanner.jsx";
 import Toaster from "./components/Toaster.jsx";
 import PopularKeywords from "./components/PopularKeywords.jsx";
-import EmptyState from "./components/EmptyState.jsx";
-import { ProductListSkeleton } from "./components/Skeleton.jsx";
+import HomePage from "./app/HomePage.jsx";
+import { ChatScreen, MyScreen, RequireId } from "./app/routeScreens.jsx";
+import useAdminAccess from "./app/useAdminAccess.js";
+import useBadges from "./app/useBadges.js";
+import useCategories from "./app/useCategories.js";
+import useHomeFeed from "./app/useHomeFeed.js";
+import useProductDetail from "./app/useProductDetail.js";
+import useScrollRestoration from "./app/useScrollRestoration.js";
 import { client } from "./api/client.js";
-import { chatSocket } from "./api/chatSocket.js";
-import { fetchChatUnreadCount, openChatRoom } from "./api/chatApi.js";
-import { fetchUnreadCount } from "./api/notificationApi.js";
+import { openChatRoom } from "./api/chatApi.js";
 import { logout } from "./api/authApi.js";
-import { fetchMe } from "./api/userApi.js";
 import { blockConfirmText, blockUser, unblockUser } from "./api/blockApi.js";
 import { deletePushSubscription } from "./api/pushApi.js";
 import { disablePush } from "./push.js";
-import { addFavorite, fetchCategories, fetchProduct, fetchProducts, removeFavorite } from "./api/productApi.js";
-import { homeSearch, isAppPath, MY_TABS, parseHomeQuery, parseId, paths } from "./routes.js";
+import { addFavorite, removeFavorite } from "./api/productApi.js";
+import { homeSearch, isAppPath, parseHomeQuery, parseId, paths } from "./routes.js";
 import { toast } from "./toast.js";
 import { serverStatus } from "./serverStatus.js";
 import styles from "./App.module.css";
@@ -46,27 +45,6 @@ function savedRegion() {
     return Number.isSafeInteger(region?.id) && region.id > 0 && typeof region.dong === "string" ? region : null;
   } catch { return null; }
 }
-const emptyFeed = { items: [], cursor: null, hasNext: false, loading: false, loadingMore: false, error: "" };
-/** 상세 응답을 기억해 둘 기록 수. 뒤로가기로 돌아온 상세를 다시 요청(조회수 증가)하지 않기 위한 것이라 많을 필요가 없다. */
-const DETAIL_CACHE_SIZE = 30;
-
-/** 경로의 id 가 올바를 때만 화면을 그린다. /products/abc 같은 주소는 없는 페이지다. */
-function RequireId({ name, onHome, children }) {
-  const params = useParams();
-  return parseId(params[name]) ? children : <NotFound onHome={onHome} />;
-}
-
-function ChatScreen(props) {
-  const { roomId } = useParams();
-  if (roomId !== undefined && !parseId(roomId)) return <NotFound onHome={props.onHome} />;
-  return <ChatPage key={props.user?.id ?? "guest"} {...props} roomId={parseId(roomId)} />;
-}
-
-function MyScreen(props) {
-  const { tab = "favorites" } = useParams();
-  if (!MY_TABS.includes(tab)) return <NotFound onHome={props.onHome} />;
-  return <MyPage key={props.user?.id ?? "guest"} {...props} tab={tab} />;
-}
 
 /**
  * 화면 조립.
@@ -79,29 +57,10 @@ function MyScreen(props) {
  *
  * 로그인·동네 선택·알림함·상품 등록/수정 창은 주소에 넣지 않는다. 공유할 대상이 아니고,
  * 작성 중 뒤로가기로 입력이 날아가면 안 되기 때문이다.
+ *
+ * 서로 상태를 나누지 않는 덩어리는 src/app/ 의 훅으로 뗐다(홈 목록·카테고리·상세·뱃지·관리자 여부·스크롤 복원).
+ * 여기에는 주소 해석, 이동, 여러 덩어리를 잇는 동작(찜·차단·저장·로그아웃), 창 목록, 오류 경계 배치만 남긴다.
  */
-/**
- * 목록 끝 표시. 화면 아래 600px 안으로 들어오면 onReach 를 부른다.
- * 스크롤 이벤트마다 위치를 재지 않고 브라우저(IntersectionObserver)에 맡긴다. 닿기 전에 미리 불러 기다림을 줄인다.
- * 불러오는 동안은 부모가 이 요소를 빼므로, 다 불러온 뒤에도 아직 화면 가까이면 다시 나타나며 한 번 더 부른다
- * (첫 페이지가 화면보다 짧은 큰 모니터에서도 끝까지 채워진다).
- */
-function InfiniteTrigger({ onReach }) {
-  const ref = useRef(null);
-  const reach = useRef(onReach);
-  reach.current = onReach;
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || typeof IntersectionObserver === "undefined") return undefined;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) reach.current();
-    }, { rootMargin: "0px 0px 600px 0px" });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-  return <div ref={ref} aria-hidden="true" style={{ height: 1 }} />;
-}
-
 export default function App() {
   const session = useSyncExternalStore(client.subscribe, client.getSession);
   // 데모 서버가 꺼져 있으면 안내 띠 하나로 설명하고, 같은 이유의 오류 줄·스켈레톤은 숨긴다.
@@ -122,239 +81,41 @@ export default function App() {
   const view = pageLocation.pathname.startsWith("/chat") ? "chat"
     : pageLocation.pathname.startsWith("/my") || pageLocation.pathname.startsWith("/settings") ? "my"
     : pageLocation.pathname.startsWith("/admin") ? "admin" : "home";
+  const pageKey = pageLocation.pathname + pageLocation.search;
 
-  /**
-   * 관리자 여부. null 은 아직 모름. 세션에는 역할이 없어 내 정보의 admin 으로 읽는다.
-   * 헤더 버튼과 관리자 틀을 고르는 데만 쓴다. 실제 차단은 서버가 하고, 관리자 API 가 404 면 adminDenied 가 켜진다.
-   */
-  const [admin, setAdmin] = useState(null);
-  const [adminDenied, setAdminDenied] = useState(false);
   const [region, setRegion] = useState(savedRegion);
-  const [categories, setCategories] = useState([]);
-  const [categoryError, setCategoryError] = useState("");
-  const [categoryRetry, setCategoryRetry] = useState(0);
   const [search, setSearch] = useState(keyword);
-  const [retry, setRetry] = useState(0);
-  const [feed, setFeed] = useState(emptyFeed);
   const [modal, setModal] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [chatUnreadCount, setChatUnreadCount] = useState(0);
-  const [detail, setDetail] = useState(null);
-  const [detailRetry, setDetailRetry] = useState(0);
   const [editor, setEditor] = useState(null);
   const [productRevision, setProductRevision] = useState(0);
   // 신고 창에 넘길 대상. 상세·프로필·채팅방 어디서 열든 창은 하나다.
   const [reporting, setReporting] = useState(null);
   const [loggingOut, setLoggingOut] = useState(false);
-  const feedVersion = useRef(0);
-  const moreController = useRef(null);
-  const morePending = useRef(false);
-  const detailCache = useRef(new Map());
   const logoutPending = useRef(false);
   const lastUserId = useRef(null);
-  // 상세를 받아 둔 사용자. 처음 값을 현재 사용자로 둬야 새로고침 직후(세션 복원)를 "사용자 변경"으로 오인해 상세를 두 번 받지 않는다.
-  const detailUserId = useRef(user?.id ?? null);
-  const reloadChatUnread = useRef(() => {});
-  /**
-   * 주소별 스크롤 위치. 뒤로가기로 목록에 돌아오면 보던 자리에서 이어 본다.
-   *
-   * 기록 항목(location.key)으로 나누면 더 정확하지만, 이 라우터 설정에서는 key 가 계속 "default" 라
-   * 화면이 바뀐 것을 알아채지 못한다. 같은 주소의 서로 다른 기록 항목은 위치를 공유한다(실용적인 절충).
-   */
-  const scrollPositions = useRef(new Map());
-  const restoreTarget = useRef(0);
-  const pageKey = pageLocation.pathname + pageLocation.search;
-  const chatUnreadPath = useRef(location.pathname);
 
-  useEffect(() => {
-    const abort = new AbortController();
-    setCategoryError("");
-    fetchCategories(abort.signal).then((rows) => { if (!abort.signal.aborted) setCategories(rows); })
-      .catch((error) => { if (!abort.signal.aborted) setCategoryError(error.message); });
-    return () => abort.abort();
-  }, [categoryRetry, user?.id]);
-
-  // 계정이 바뀌면 관리자 여부를 새로 묻는다. 실패하면 관리자가 아닌 것으로 본다(버튼이 안 보일 뿐 기능은 그대로다).
-  useEffect(() => {
-    setAdminDenied(false);
-    if (!user?.id) { setAdmin(false); return undefined; }
-    const abort = new AbortController();
-    setAdmin(null);
-    fetchMe(abort.signal).then((me) => { if (!abort.signal.aborted) setAdmin(me?.admin === true); })
-      .catch(() => { if (!abort.signal.aborted) setAdmin(false); });
-    return () => abort.abort();
-  }, [user?.id]);
+  const { admin, denied: adminDenied, deny: denyAdmin } = useAdminAccess(user?.id);
+  const categoriesState = useCategories(user?.id);
+  const { categories } = categoriesState;
+  const homeFeed = useHomeFeed({ enabled: view === "home", region, categoryId, sort, keyword, userId: user?.id });
+  const { feed } = homeFeed;
+  const productDetail = useProductDetail({ productId, location, userId: user?.id, onUserChanged: () => setEditor(null) });
+  const { detail } = productDetail;
+  const badges = useBadges(user?.id, location.pathname);
+  const rememberScroll = useScrollRestoration(pageKey, feed.items.length);
 
   // 데모 서버가 다시 켜지면 홈의 카테고리·목록을 다시 부른다. 꺼진 동안 숨겨 둔 오류가 그대로 드러나지 않게 한다.
   useEffect(() => {
     if (serverState !== "recovered") return;
-    setCategoryRetry((value) => value + 1);
-    setRetry((value) => value + 1);
+    categoriesState.retry();
+    homeFeed.reload();
   }, [serverState]);
 
   // 뒤로가기로 검색 조건이 바뀌면 입력창도 주소를 따라간다.
   useEffect(() => { setSearch(keyword); }, [keyword]);
 
-  /**
-   * 페이지를 옮기면 창을 닫고 스크롤을 옮긴다. 처음 보는 페이지는 맨 위, 뒤로가기로 돌아온 페이지는 보던 자리다.
-   * 모달을 열고 닫을 때는 아래 페이지(pageLocation)가 그대로라 여기 해당하지 않는다.
-   */
-  /**
-   * 뒤로·앞으로는 우리 코드를 거치지 않으므로 popstate 에서 위치를 적는다.
-   * 이 이벤트는 화면이 바뀌기 전에 오기 때문에 잘리지 않은 값을 읽을 수 있다.
-   */
-  useEffect(() => {
-    window.addEventListener("popstate", rememberScroll);
-    return () => window.removeEventListener("popstate", rememberScroll);
-  });
-
-  useEffect(() => {
-    restoreTarget.current = scrollPositions.current.get(pageKey) ?? 0;
-    window.scrollTo(0, restoreTarget.current);
-    if (window.scrollY >= restoreTarget.current) restoreTarget.current = 0;
-    setModal(null);
-
-    // 사용자가 직접 움직였다면 복원은 그만둔다(돌아온 목록이 더 짧을 수도 있다).
-    const cancelRestore = () => { restoreTarget.current = 0; };
-    window.addEventListener("wheel", cancelRestore, { passive: true });
-    window.addEventListener("touchstart", cancelRestore, { passive: true });
-    window.addEventListener("keydown", cancelRestore);
-    return () => {
-      window.removeEventListener("wheel", cancelRestore);
-      window.removeEventListener("touchstart", cancelRestore);
-      window.removeEventListener("keydown", cancelRestore);
-    };
-  }, [pageKey]);
-
-  /**
-   * 돌아온 직후에는 목록이 아직 스켈레톤이라 예전만큼 내려갈 수 없다.
-   * 목록이 채워지면 한 번 더 맞추고, 원하는 위치에 닿으면 그만둔다.
-   */
-  useLayoutEffect(() => {
-    if (!restoreTarget.current) return;
-    window.scrollTo(0, restoreTarget.current);
-    if (window.scrollY >= restoreTarget.current) restoreTarget.current = 0;
-  }, [feed.items.length]);
-
-  useEffect(() => {
-    if (view !== "home") return undefined;
-    const version = ++feedVersion.current;
-    const abort = new AbortController();
-    moreController.current?.abort(); morePending.current = false;
-    setFeed({ ...emptyFeed, loading: !!region });
-    if (region) fetchProducts({ regionId: region.id, categoryId, sort, keyword, signal: abort.signal })
-      .then((page) => {
-        if (!abort.signal.aborted && version === feedVersion.current)
-          setFeed({ ...emptyFeed, items: page.content, cursor: page.nextCursor, hasNext: page.hasNext });
-      }).catch((error) => {
-        if (!abort.signal.aborted && version === feedVersion.current) setFeed({ ...emptyFeed, error: error.message });
-      });
-    return () => { abort.abort(); moreController.current?.abort(); };
-  }, [view, region?.id, categoryId, sort, keyword, retry, user?.id]);
-
-  /**
-   * 상품 상세. 주소가 곧 "상세 열기"라 effect 에서 불러올 수밖에 없는데, 상세 조회는 조회수를 올린다.
-   * 같은 기록 항목(location.key)의 요청은 한 번만 보내고 결과를 기억한다.
-   * - StrictMode 가 effect 를 두 번 실행해도 두 번째는 첫 요청을 기다린다(그래서 요청을 abort 하지 않는다).
-   * - 프로필을 열었다가 뒤로가기로 돌아온 상세도 다시 세지 않는다.
-   * 다른 곳에 갔다가 새로 들어오면 새 기록 항목이라 새 조회로 센다. 실패한 응답은 기억하지 않는다(다시 시도 가능).
-   */
-  useEffect(() => {
-    if (!productId) { setDetail(null); return undefined; }
-    const key = `${location.key}:${productId}`;
-    const cache = detailCache.current;
-    let entry = cache.get(key);
-    if (!entry) {
-      const initial = location.state?.product;
-      entry = { promise: initial?.id === productId ? Promise.resolve(initial) : fetchProduct(productId) };
-      cache.set(key, entry);
-      if (cache.size > DETAIL_CACHE_SIZE) cache.delete(cache.keys().next().value);
-    }
-    let active = true;
-    setDetail({ key, id: productId, loading: true, data: null, error: "" });
-    entry.promise
-      .then((data) => { if (active) setDetail({ key, id: productId, loading: false, data, error: "" }); })
-      .catch((error) => {
-        if (cache.get(key) === entry) cache.delete(key);
-        if (active) setDetail({ key, id: productId, loading: false, data: null, error: error.message });
-      });
-    return () => { active = false; };
-  }, [productId, location.key, detailRetry]);
-
-  // 로그인한 동안만 채팅 실시간 연결을 유지한다. 사용자가 바뀌면 이전 연결을 끊고 새 토큰으로 다시 연결한다.
-  useEffect(() => {
-    if (!user) return undefined;
-    chatSocket.start();
-    return () => chatSocket.stop();
-  }, [user?.id]);
-
-  // 알림 뱃지. 로그인 시·소켓 (재)연결 시 서버 값으로 맞추고, 그 사이에는 실시간 알림 이벤트로 1씩 올린다.
-  // 끊긴 동안 온 알림은 이벤트로 다시 오지 않으므로 재연결 때 다시 센다.
-  useEffect(() => {
-    setUnreadCount(0);
-    if (!user) return undefined;
-    let abort = new AbortController();
-    const load = () => {
-      abort.abort(); abort = new AbortController();
-      const signal = abort.signal;
-      fetchUnreadCount(signal).then((data) => { if (!signal.aborted) setUnreadCount(data.count); })
-        .catch(() => { /* 뱃지는 부가 정보다. 다음 연결·알림 때 다시 맞춘다. */ });
-    };
-    load();
-    const offConnected = chatSocket.onConnected(load);
-    const offEvent = chatSocket.onEvent((event) => {
-      if (event.type === "NOTIFICATION") setUnreadCount((value) => value + 1);
-    });
-    return () => { abort.abort(); offConnected(); offEvent(); };
-  }, [user?.id]);
-
-  /**
-   * 채팅 뱃지(안 읽은 메시지 합계). 알림 뱃지와 달리 +1 로 세지 않고 서버에 다시 묻는다.
-   * 보고 있는 방의 메시지는 곧바로 읽음 처리되고, 방에 들어가 읽으면 여러 개가 한 번에 줄어서
-   * 화면에서 더하고 빼면 어긋나기 쉽다. 대신 이벤트가 몰려도 요청은 300ms 에 한 번만 보낸다.
-   * 다시 묻는 때: 로그인, 소켓 (재)연결, 상대의 새 메시지, 내가 읽음, 페이지 이동(나가기는 이벤트 없이 읽음 처리된다).
-   */
-  useEffect(() => {
-    setChatUnreadCount(0);
-    if (!user) return undefined;
-    const me = user.id;
-    let abort = new AbortController();
-    let timer = null;
-    const load = () => {
-      clearTimeout(timer); timer = null;
-      abort.abort(); abort = new AbortController();
-      const signal = abort.signal;
-      fetchChatUnreadCount(signal).then((data) => { if (!signal.aborted) setChatUnreadCount(data.count); })
-        .catch(() => { /* 뱃지는 부가 정보다. 다음 이벤트·이동 때 다시 맞춘다. */ });
-    };
-    const schedule = () => { clearTimeout(timer); timer = setTimeout(load, 300); };
-    reloadChatUnread.current = schedule;
-    load();
-    const offConnected = chatSocket.onConnected(load);
-    const offEvent = chatSocket.onEvent((event) => {
-      if ((event.type === "MESSAGE" && event.message.senderId !== me) || (event.type === "READ" && event.readerId === me)) schedule();
-    });
-    return () => {
-      clearTimeout(timer); abort.abort(); offConnected(); offEvent();
-      reloadChatUnread.current = () => {};
-    };
-  }, [user?.id]);
-
-  // 처음 렌더링은 위 effect 가 이미 불러오므로 건너뛴다.
-  useEffect(() => {
-    if (chatUnreadPath.current === location.pathname) return;
-    chatUnreadPath.current = location.pathname;
-    reloadChatUnread.current();
-  }, [location.pathname]);
-
-  // 사용자가 바뀌면(로그인·로그아웃) 이전 사용자 기준의 상세(isLiked·isMine)를 다시 받아야 한다.
-  useEffect(() => {
-    if (detailUserId.current === (user?.id ?? null)) return;
-    detailUserId.current = user?.id ?? null;
-    setEditor(null);
-    detailCache.current.clear();
-    setDetailRetry((value) => value + 1);
-  }, [user?.id]);
+  // 페이지를 옮기면 창을 닫는다(스크롤은 useScrollRestoration 이 옮긴다). 모달을 열고 닫을 때는 아래 페이지가 그대로다.
+  useEffect(() => { setModal(null); }, [pageKey]);
 
   // 로그인하는 순간에만 대표 동네를 홈에 적용한다. 매 렌더마다 적용하면
   // 로그인한 사용자가 홈에서 다른 동네를 골라볼 수 없다.
@@ -365,30 +126,8 @@ export default function App() {
     lastUserId.current = user?.id ?? null;
   }, [user?.id]);
 
-  async function more() {
-    if (morePending.current || feed.loading || !feed.hasNext) return;
-    morePending.current = true;
-    const version = feedVersion.current;
-    const abort = new AbortController(); moreController.current = abort;
-    setFeed((old) => ({ ...old, loadingMore: true, error: "" }));
-    try {
-      const page = await fetchProducts({ regionId: region.id, categoryId, sort, keyword, cursor: feed.cursor, signal: abort.signal });
-      if (!abort.signal.aborted && version === feedVersion.current) setFeed((old) => {
-        const known = new Set(old.items.map((item) => item.id));
-        return { ...old, items: [...old.items, ...page.content.filter((item) => !known.has(item.id))],
-          cursor: page.nextCursor, hasNext: page.hasNext, loadingMore: false };
-      });
-    } catch (error) {
-      if (!abort.signal.aborted && version === feedVersion.current) setFeed((old) => ({ ...old, error: error.message, loadingMore: false }));
-    } finally { if (version === feedVersion.current) morePending.current = false; }
-  }
-
   // ---------- 이동 ----------
 
-  /** 지금 보고 있는 기록 항목의 스크롤 위치를 적어 둔다. 화면이 바뀌기 전에 불러야 한다. */
-  function rememberScroll() {
-    scrollPositions.current.set(pageKey, window.scrollY);
-  }
   /** 이동은 모두 이 함수를 지난다(위치를 적고 옮긴다). 뒤로가기는 popstate 가 맡는다. */
   function goTo(to, options) {
     rememberScroll();
@@ -399,7 +138,7 @@ export default function App() {
   function go(to) {
     setEditor(null); setModal(null);
     const current = pageLocation.pathname + pageLocation.search;
-    if (current === to && !location.state?.background) { setRetry((value) => value + 1); return; }
+    if (current === to && !location.state?.background) { homeFeed.reload(); return; }
     goTo(to);
   }
   function openProduct(id, product) {
@@ -408,7 +147,6 @@ export default function App() {
   function openProfile(id) {
     goTo(paths.user(id), { state: { background: pageLocation } });
   }
-  /** 모달 닫기. 앱 안에서 열었으면 뒤로가기(아래 화면이 그대로 남는다), 주소로 바로 들어왔으면 홈으로 바꿔치기. */
   /** 창 경계가 잡았을 때: 떠 있는 창을 모두 닫는다. 어느 창이 망가졌는지 가리지 않는다(다시 열면 된다). */
   function closeAllWindows() {
     setModal(null);
@@ -417,6 +155,7 @@ export default function App() {
     if (productId || profileId) closeModal();
   }
 
+  /** 모달 닫기. 앱 안에서 열었으면 뒤로가기(아래 화면이 그대로 남는다), 주소로 바로 들어왔으면 홈으로 바꿔치기. */
   function closeModal() {
     if (location.state?.background) navigate(-1);
     else goTo(paths.home, { replace: true });
@@ -427,7 +166,7 @@ export default function App() {
   }
   function submitSearch(event) {
     event.preventDefault();
-    if (search.trim() === keyword && view === "home") { setRetry((value) => value + 1); return; }
+    if (search.trim() === keyword && view === "home") { homeFeed.reload(); return; }
     changeHomeQuery({ keyword: search.trim() });
   }
   /** 알림 이동. 앱 화면 허용 목록에 있는 경로만 따른다(외부 주소로의 열린 리다이렉트 방지). */
@@ -456,8 +195,8 @@ export default function App() {
       const result = product.isLiked ? await removeFavorite(product.id) : await addFavorite(product.id);
       const apply = (item) => item.id === product.id
         ? { ...item, isLiked: result.isLiked, favoriteCount: result.favoriteCount } : item;
-      setFeed((old) => ({ ...old, items: old.items.map(apply) }));
-      patchDetail((data) => apply(data));
+      homeFeed.patchItems(apply);
+      productDetail.patch((data) => apply(data));
       return result;
     } catch (error) {
       toast.error(error.message);
@@ -476,23 +215,12 @@ export default function App() {
     return result;
   }
 
-  /** 열린 상세를 서버 응답으로 바꾸고, 기억해 둔 응답도 같이 바꾼다(뒤로가기로 돌아와도 최신 값). */
-  function patchDetail(mapper) {
-    setDetail((old) => {
-      if (!old?.data) return old;
-      const data = mapper(old.data);
-      const entry = detailCache.current.get(old.key);
-      if (entry) entry.promise = Promise.resolve(data);
-      return { ...old, data };
-    });
-  }
-
   /**
    * 동네 인증 결과를 홈 목록에 반영한다.
    * 대표 동네를 인증해 두고도 홈에서 다시 고르게 하면 인증한 의미가 없다.
    */
   function applyPrimaryRegion(regions) {
-    const primary = regions.find((region) => region.isPrimary);
+    const primary = regions.find((item) => item.isPrimary);
     if (primary) selectRegion({ id: primary.id, dong: primary.name });
   }
 
@@ -538,9 +266,9 @@ export default function App() {
    * 화면에서 항목을 직접 지우지 않고 서버에 다시 묻는다(찜과 같은 이유).
    */
   function blocksChanged() {
-    setRetry((value) => value + 1);
+    homeFeed.reload();
     setProductRevision((value) => value + 1);
-    reloadChatUnread.current();
+    badges.reloadChatUnread();
   }
   /** 차단. 되돌릴 수 있지만 채팅이 바로 끊기므로 한 번 묻는다. 성공하면 true. */
   async function blockPerson({ id, nickname }) {
@@ -569,7 +297,7 @@ export default function App() {
   }
   const goHome = () => go(paths.home);
   // 로그아웃은 설정 화면에만 있다(헤더·하단 탭에는 없다).
-  const navigation = { user, view, chatUnreadCount, onLogin: login,
+  const navigation = { user, view, chatUnreadCount: badges.chatUnreadCount, onLogin: login,
     onHome: goHome, onMyPage: () => go(paths.my()), onChat: () => go(paths.chat),
     onRegionClick: () => setModal("region") };
   // 카테고리 줄·인기 검색어·사이드바는 부가 영역이다. 망가지면 조용히 숨기고 나머지 화면은 그대로 쓴다.
@@ -581,14 +309,14 @@ export default function App() {
   /** 상세 안에서 상태 변경·끌어올리기를 했다. 같은 상세에 머물며 목록만 새로 받는다. */
   function detailChanged(product) {
     setProductRevision((value) => value + 1);
-    setRetry((value) => value + 1);
-    patchDetail(() => product);
+    homeFeed.reload();
+    productDetail.patch(() => product);
   }
   /** 등록·수정 창에서 저장했다. 저장 응답으로 상세를 연다(상세를 다시 요청하지 않아 조회수가 오르지 않는다). */
   function productSaved(product) {
     setEditor(null);
     setProductRevision((value) => value + 1);
-    setRetry((value) => value + 1);
+    homeFeed.reload();
     openProduct(product.id, product);
   }
   function writeProduct() {
@@ -596,37 +324,10 @@ export default function App() {
     setEditor({ product: null });
   }
 
-  const homePage = <main className={styles.shell} id="main" tabIndex={-1}>
-    <section aria-label="상품 목록">
-      {categoryError && !serverDown && <div className={styles.error} role="alert">{categoryError}<button className="btn btn-outline btn-sm" onClick={() => setCategoryRetry((value) => value + 1)}>카테고리 다시 시도</button></div>}
-      <div className={styles.feedHead}>
-        <div>
-          <h1 className={styles.title}>{region ? region.dong + "의 이웃 물건" : "우리 동네에서 발견하는 좋은 물건"}</h1>
-          {/* 동네를 안 고른 상태의 안내는 아래 빈 상태가 하므로 여기서 또 적지 않는다. */}
-          {/* 불러온 개수는 무한 스크롤에서 계속 바뀌어 뜻이 없다. 검색 중일 때만 무엇을 찾는지 알린다. */}
-          {region && keyword && <p className={styles.sub}>"{keyword}" 검색 결과</p>}
-        </div>
-        <label className={styles.sortLabel}>정렬<select className={styles.sortBtn} value={sort} onChange={(e) => changeHomeQuery({ sort: e.target.value })} aria-label="상품 정렬">
-          <option value="LATEST">최신순</option><option value="PRICE_ASC">낮은 가격순</option>
-        </select></label>
-      </div>
-      {!region && <EmptyState title="먼저 둘러볼 동네를 선택해 주세요" description="동네를 고르면 근처 이웃이 올린 물건을 보여드려요."
-        actionLabel="동네 선택하기" onAction={() => setModal("region")} />}
-      {feed.loading && !serverDown && <ProductListSkeleton />}
-      {feed.error && !serverDown && <div className={styles.error} role="alert">{feed.error}<button className="btn btn-outline btn-sm" onClick={() => feed.items.length ? more() : setRetry((value) => value + 1)}>다시 시도</button></div>}
-      {region && !feed.loading && !feed.error && feed.items.length === 0 &&
-        <EmptyState title={keyword ? `"${keyword}" 검색 결과가 없어요` : "아직 이 동네에 올라온 물건이 없어요"}
-          description="다른 동네나 검색어로 찾아보거나, 첫 물건을 올려보세요." />}
-      <div className={styles.feed}>{feed.items.map((product) => <ProductCard key={product.id} product={product}
-        onOpen={() => openProduct(product.id)} />)}</div>
-      {feed.loadingMore && <div className={styles.more}><ProductListSkeleton count={3} label="상품을 더 불러오는 중" /></div>}
-      {/* 이 줄이 화면 가까이 오면 다음 페이지를 부른다. 실패하면 멈추고 위의 "다시 시도"를 기다린다(자동 재시도는 요청을 쏟아낸다). */}
-      {feed.hasNext && !feed.loading && !feed.loadingMore && !feed.error && <InfiniteTrigger onReach={more} />}
-    </section>
-    <ErrorBoundary name="사이드바">
-      <Sidebar onRegionClick={navigation.onRegionClick} onKeyword={(value) => changeHomeQuery({ keyword: value })} />
-    </ErrorBoundary>
-  </main>;
+  const homePage = <HomePage region={region} keyword={keyword} sort={sort} serverDown={serverDown}
+    categoryError={categoriesState.error} onCategoryRetry={categoriesState.retry}
+    feed={feed} onMore={homeFeed.more} onReload={homeFeed.reload}
+    onQueryChange={changeHomeQuery} onRegionClick={navigation.onRegionClick} onOpenProduct={openProduct} />;
   const chatScreen = <ChatScreen user={user} onHome={goHome} onLogin={login} onSelectRoom={selectRoom}
     onOpenProduct={openProduct} onOpenProfile={openProfile}
     onReport={(person) => openReport({ targetType: "USER", targetId: person.id, targetName: person.nickname, blockTarget: person })}
@@ -655,7 +356,7 @@ export default function App() {
   const adminScreen = !inAdmin ? <NotFound onHome={goHome} />
     : admin === null ? adminLoading
     : <Suspense fallback={adminLoading}>
-      <AdminApp onExit={goHome} onNotFound={() => setAdminDenied(true)}
+      <AdminApp onExit={goHome} onNotFound={denyAdmin}
         onOpenProduct={(id) => openProduct(id)} onOpenProfile={(id) => openProfile(id)} />
     </Suspense>;
 
@@ -663,7 +364,7 @@ export default function App() {
     <a className="skip-link btn btn-primary btn-sm" href="#main">본문 바로가기</a>
     {/* 관리자 영역은 자기 틀(메뉴·사이트로 돌아가기)을 쓴다. 일반 헤더·하단 탭·상품 등록·footer 를 모두 뺀다. */}
     {!inAdmin && <Header {...navigation} region={region} search={search} onSearchChange={setSearch} onSearch={submitSearch}
-      unreadCount={unreadCount} onNotifications={() => setModal("notifications")}
+      unreadCount={badges.unreadCount} onNotifications={() => setModal("notifications")}
       admin={admin === true} onAdmin={() => goTo(paths.admin)}>
       {categoryBar}
     </Header>}
@@ -706,15 +407,15 @@ export default function App() {
     {modal === "auth" && <AuthModal onClose={() => setModal(null)} />}
     {modal === "region" && <RegionPicker onClose={() => setModal(null)} onSelect={selectRegion} />}
     {modal === "notifications" && user && <NotificationPanel onClose={() => setModal(null)} onNavigate={openNotificationTarget}
-      onRead={() => setUnreadCount((value) => Math.max(0, value - 1))} onAllRead={() => setUnreadCount(0)} />}
+      onRead={badges.markRead} onAllRead={badges.markAllRead} />}
     {detail && <ProductDetail key={detail.key} detail={detail} onClose={closeModal}
-      onRetry={() => setDetailRetry((value) => value + 1)}
+      onRetry={productDetail.retry}
       onEdit={(product) => { setEditor({ product }); closeModal(); }} onChanged={detailChanged} onStartChat={startChat}
       onToggleFavorite={favoriteFromDetail}
       onOpenProfile={openProfile}
       onReport={(product) => openReport({ targetType: "PRODUCT", targetId: product.id, targetName: product.title,
         blockTarget: { id: product.seller.id, nickname: product.seller.nickname } })}
-      onDeleted={() => { setProductRevision((v) => v + 1); setRetry((v) => v + 1); closeModal(); }} />}
+      onDeleted={() => { setProductRevision((v) => v + 1); homeFeed.reload(); closeModal(); }} />}
     {editor && <ProductForm key={editor.product?.id ?? "new"} product={editor.product} categories={categories}
       onClose={() => setEditor(null)} onRegionsChange={applyPrimaryRegion} onSaved={productSaved} />}
     {profileId && <UserProfile key={profileId} userId={profileId} me={user?.id ?? null} onClose={closeModal}
